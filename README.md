@@ -1,4 +1,4 @@
-# gdlang
+# weilang
 
 使用 Go 语言实现一门自己的解释语言
 
