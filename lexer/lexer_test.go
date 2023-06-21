@@ -37,6 +37,7 @@ a.foo
 // 这是一段注释
 'world'
 'hello world'
+中文变量名
 `
 
 	tests := []struct {
@@ -267,9 +268,14 @@ a.foo
 			expectedEnd:   token.Position{Line: 29, Column: 13},
 		},
 		{
+			expectedType: token.IDENT, expectedLiteral: "中文变量名",
+			expectedStart: token.Position{Line: 30, Column: 0},
+			expectedEnd:   token.Position{Line: 30, Column: 5},
+		},
+		{
 			token.EOF, "",
-			token.Position{},
-			token.Position{},
+			token.Position{-1, -1},
+			token.Position{-1, -1},
 		},
 	}
 
@@ -288,6 +294,7 @@ a.foo
 				i, tt.expectedLiteral, tok.Literal)
 		}
 
+		// 方便测试，每个都判断行列太麻烦了
 		if tt.expectedStart.IsZero() {
 			continue
 		}
@@ -300,6 +307,25 @@ a.foo
 		if !tok.End.Equal(&tt.expectedEnd) {
 			t.Fatalf("tests[%d] - end wrong. expected=%+v, got=%+v",
 				i, tt.expectedEnd, tok.End)
+		}
+	}
+}
+
+func TestUnicodeCategory(t *testing.T) {
+	tests := []struct {
+		ch               rune
+		expectedCategory string
+	}{
+		{'A', "Lu"},
+		{'a', "Ll"},
+		{'中', "Lo"},
+		{'1', "Nd"},
+	}
+	for i, tt := range tests {
+		got := UnicodeCategory(tt.ch)
+		if got != tt.expectedCategory {
+			t.Fatalf("tests[%d] - category wrong. expected=%v, got=%v",
+				i, tt.expectedCategory, got)
 		}
 	}
 }

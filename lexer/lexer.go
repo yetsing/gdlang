@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"unicode"
 	"weilang/token"
 )
 
@@ -101,7 +102,7 @@ func (l *Lexer) NextToken() token.Token {
 	case 0:
 		ttype = token.EOF
 	default:
-		if isIdentifier(l.ch) {
+		if isIdentifierStart(l.ch) {
 			return l.readIdentifier()
 		} else if isDigit(l.ch) {
 			return l.readNumber()
@@ -169,17 +170,17 @@ func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
 		startIndex++
 		endIndex--
 	case token.EOF:
-		start.Line = 0
-		start.Column = 0
-		end.Line = 0
-		end.Column = 0
+		start.Line = -1
+		start.Column = -1
+		end.Line = -1
+		end.Column = -1
 	}
 	tok := token.Token{Type: ttype, Literal: string(l.ucodes[startIndex:endIndex]), Start: start, End: end}
 	return tok
 }
 
 func (l *Lexer) readIdentifier() token.Token {
-	for isIdentifier(l.ch) {
+	for isIdentifierContinue(l.ch) {
 		l.readChar()
 	}
 	tok := l.buildToken(token.IDENT)
@@ -223,10 +224,62 @@ func (l *Lexer) readComment() token.Token {
 	return l.buildToken(token.COMMENT)
 }
 
-func isIdentifier(ch rune) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+// 参考 Python 的规则 https://docs.python.org/3/reference/lexical_analysis.html#identifiers
+var idStartCategorys = map[string]uint8{
+	"Lu": 1,
+	"Ll": 1,
+	"Lm": 1,
+	"Lt": 1,
+	"Lo": 1,
+	"Nl": 1,
+}
+var idContinueCategorys = map[string]uint8{
+	"Lu": 1,
+	"Ll": 1,
+	"Lm": 1,
+	"Lt": 1,
+	"Lo": 1,
+	"Nl": 1,
+	"Mn": 1,
+	"Mc": 1,
+	"Nd": 1,
+	"Pc": 1,
+}
+
+func isIdentifierStart(ch rune) bool {
+
+	switch ch {
+	case '_':
+		return true
+	default:
+		cat := UnicodeCategory(ch)
+		_, ok := idStartCategorys[cat]
+		return ok
+	}
+}
+
+func isIdentifierContinue(ch rune) bool {
+	switch ch {
+	case '_':
+		return true
+	default:
+		cat := UnicodeCategory(ch)
+		_, ok := idContinueCategorys[cat]
+		return ok
+	}
 }
 
 func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9'
+}
+
+// UnicodeCategory returns the Unicode Character Category of the given rune.
+// code from https://stackoverflow.com/a/53507592
+func UnicodeCategory(r rune) string {
+	for name, table := range unicode.Categories {
+		if len(name) == 2 && unicode.Is(table, r) {
+			return name
+		}
+	}
+	return "Cn"
 }
