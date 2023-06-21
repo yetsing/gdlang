@@ -37,7 +37,7 @@ a.foo
 // 这是一段注释
 'world'
 'hello world'
-中文变量名
+ var 中文变量名 = "a开发b"
 `
 
 	tests := []struct {
@@ -268,9 +268,24 @@ a.foo
 			expectedEnd:   token.Position{Line: 29, Column: 13},
 		},
 		{
+			expectedType: token.VAR, expectedLiteral: "var",
+			expectedStart: token.Position{Line: 30, Column: 1},
+			expectedEnd:   token.Position{Line: 30, Column: 4},
+		},
+		{
 			expectedType: token.IDENT, expectedLiteral: "中文变量名",
-			expectedStart: token.Position{Line: 30, Column: 0},
-			expectedEnd:   token.Position{Line: 30, Column: 5},
+			expectedStart: token.Position{Line: 30, Column: 5},
+			expectedEnd:   token.Position{Line: 30, Column: 10},
+		},
+		{
+			expectedType: token.ASSIGN, expectedLiteral: "=",
+			expectedStart: token.Position{Line: 30, Column: 11},
+			expectedEnd:   token.Position{Line: 30, Column: 12},
+		},
+		{
+			expectedType: token.STRING, expectedLiteral: "a开发b",
+			expectedStart: token.Position{Line: 30, Column: 13},
+			expectedEnd:   token.Position{Line: 30, Column: 19},
 		},
 		{
 			token.EOF, "",
