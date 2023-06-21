@@ -1,129 +1,125 @@
 package lexer
 
-import "weilang/token"
+import (
+	"weilang/token"
+)
 
 type Lexer struct {
-	input        string
-	position     int  // current position in input (points to current char)
-	readPosition int  // current reading position in input (after current char)
-	ch           rune // current char under examination
-	// utf8 列表
-	ucodes []rune
+	input string
+	// current index of ch in ucodes
+	index int
+	// current char
+	ch rune
+	// unicode 列表
+	ucodes   []rune
+	position token.Position
+	// 标记索引和位置，方便计算 Token 的 start end
+	markIndex    int
+	markPosition token.Position
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
-	l.setup()
+	l := &Lexer{input: input, index: -1}
+	l.init()
 	l.readChar()
 	return l
 }
 
 func (l *Lexer) NextToken() token.Token {
-	var tok token.Token
+	var ttype token.TokenType
 
 	l.skipWhitespace()
+	l.mark()
 
 	switch l.ch {
 	case '=':
 		if l.peekCharIs('=') {
-			ch := l.ch
 			l.readChar()
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.EQ, Literal: literal}
+			ttype = token.EQ
 		} else {
-			tok = newToken(token.ASSIGN, l.ch)
+			ttype = token.ASSIGN
 		}
 	case '+':
-		tok = newToken(token.PLUS, l.ch)
+		ttype = token.PLUS
 	case '-':
-		tok = newToken(token.MINUS, l.ch)
+		ttype = token.MINUS
 	case '!':
 		if l.peekCharIs('=') {
-			ch := l.ch
 			l.readChar()
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
+			ttype = token.NOT_EQ
 		} else {
-			tok = newToken(token.BANG, l.ch)
+			ttype = token.BANG
 		}
 	case '/':
 		if l.peekCharIs('/') {
-			l.readChar()
-			tok.Literal = l.readComment()
-			tok.Type = token.COMMENT
-			return tok
+			return l.readComment()
 		} else {
-			tok = newToken(token.SLASH, l.ch)
+			ttype = token.SLASH
 		}
 	case '*':
-		tok = newToken(token.ASTERISK, l.ch)
+		ttype = token.ASTERISK
 	case '%':
-		tok = newToken(token.MODULO, l.ch)
+		ttype = token.MODULO
 	case '<':
 		if l.peekCharIs('=') {
 			l.readChar()
-			tok = token.Token{Type: token.LESS_EQUAL_THAN, Literal: "<="}
+			ttype = token.LESS_EQUAL_THAN
 		} else {
-			tok = newToken(token.LESS_THAN, l.ch)
+			ttype = token.LESS_THAN
 		}
 	case '>':
 		if l.peekCharIs('=') {
 			l.readChar()
-			tok = token.Token{Type: token.GREAT_EQUAL_THAN, Literal: ">="}
+			ttype = token.GREAT_EQUAL_THAN
 		} else {
-			tok = newToken(token.GREAT_THAN, l.ch)
+			ttype = token.GREAT_THAN
 		}
 	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
+		ttype = token.SEMICOLON
 	case ':':
-		tok = newToken(token.COLON, l.ch)
+		ttype = token.COLON
 	case ',':
-		tok = newToken(token.COMMA, l.ch)
+		ttype = token.COMMA
 	case '{':
-		tok = newToken(token.LBRACE, l.ch)
+		ttype = token.LBRACE
 	case '}':
-		tok = newToken(token.RBRACE, l.ch)
+		ttype = token.RBRACE
 	case '(':
-		tok = newToken(token.LPAREN, l.ch)
+		ttype = token.LPAREN
 	case ')':
-		tok = newToken(token.RPAREN, l.ch)
+		ttype = token.RPAREN
 	case '"':
-		tok.Type = token.STRING
-		tok.Literal = l.readString(l.ch)
+		return l.readString(l.ch)
 	case '\'':
-		tok.Type = token.STRING
-		tok.Literal = l.readString(l.ch)
+		return l.readString(l.ch)
 	case '[':
-		tok = newToken(token.LBRACKET, l.ch)
+		ttype = token.LBRACKET
 	case ']':
-		tok = newToken(token.RBRACKET, l.ch)
+		ttype = token.RBRACKET
 	case '.':
-		tok = newToken(token.DOT, l.ch)
+		ttype = token.DOT
 	case 0:
-		tok.Literal = ""
-		tok.Type = token.EOF
+		ttype = token.EOF
 	default:
 		if isIdentifier(l.ch) {
-			tok.Literal = l.readIdentifier()
-			tok.Type = token.LookupIdent(tok.Literal)
-			return tok
+			return l.readIdentifier()
 		} else if isDigit(l.ch) {
-			tok.Type = token.INT
-			tok.Literal = l.readNumber()
-			return tok
+			return l.readNumber()
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch)
+			ttype = token.ILLEGAL
 		}
 	}
 
 	l.readChar()
-	return tok
+	return l.buildToken(ttype)
 }
 
-func (l *Lexer) setup() {
+func (l *Lexer) init() {
 	for _, u := range l.input {
 		l.ucodes = append(l.ucodes, u)
 	}
+	l.position.Line = 0
+	l.position.Column = -1
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -133,60 +129,98 @@ func (l *Lexer) skipWhitespace() {
 }
 
 func (l *Lexer) readChar() {
-	if l.readPosition >= len(l.ucodes) {
+	if l.index >= len(l.ucodes)-1 {
 		l.ch = 0
 	} else {
-		l.ch = l.ucodes[l.readPosition]
+		if l.ch == '\n' {
+			l.position.Line++
+			l.position.Column = -1
+		}
+		l.index += 1
+		l.ch = l.ucodes[l.index]
+		l.position.Column++
 	}
-	l.position = l.readPosition
-	l.readPosition += 1
 }
 
 func (l *Lexer) peekCharIs(ch rune) bool {
-	if l.readPosition >= len(l.ucodes) {
+	nextIndex := l.index + 1
+	if nextIndex >= len(l.ucodes) {
 		return 0 == ch
 	} else {
-		return l.ucodes[l.readPosition] == ch
+		return l.ucodes[nextIndex] == ch
 	}
 }
 
-func (l *Lexer) readIdentifier() string {
-	position := l.position
+// 标记一个位置
+func (l *Lexer) mark() {
+	l.markIndex = l.index
+	l.markPosition.Line = l.position.Line
+	l.markPosition.Column = l.position.Column
+}
+
+func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
+	start := l.markPosition
+	end := l.position
+	startIndex := l.markIndex
+	endIndex := l.index
+	switch ttype {
+	case token.STRING:
+		// 移除首尾的引号
+		startIndex++
+		endIndex--
+	case token.EOF:
+		start.Line = 0
+		start.Column = 0
+		end.Line = 0
+		end.Column = 0
+	}
+	tok := token.Token{Type: ttype, Literal: string(l.ucodes[startIndex:endIndex]), Start: start, End: end}
+	return tok
+}
+
+func (l *Lexer) readIdentifier() token.Token {
 	for isIdentifier(l.ch) {
 		l.readChar()
 	}
-	return string(l.ucodes[position:l.position])
+	tok := l.buildToken(token.IDENT)
+	tok.Type = token.LookupIdent(tok.Literal)
+	return tok
 }
 
-func (l *Lexer) readNumber() string {
-	position := l.position
+func (l *Lexer) readNumber() token.Token {
 	for isDigit(l.ch) {
 		l.readChar()
 	}
-	return string(l.ucodes[position:l.position])
+	return l.buildToken(token.INT)
 }
 
-func (l *Lexer) readString(end rune) string {
+func (l *Lexer) readString(end rune) token.Token {
 	// todo 判断引号是否成对
-	position := l.position + 1
+	// 跳过开始的引号
+	l.readChar()
 	for {
 		l.readChar()
 		if l.ch == end || l.ch == 0 {
 			break
 		}
 	}
-	return string(l.ucodes[position:l.position])
+	// 跳过末尾的引号
+	l.readChar()
+	return l.buildToken(token.STRING)
 }
 
-func (l *Lexer) readComment() string {
-	position := l.position + 1
+func (l *Lexer) readComment() token.Token {
+	// 跳过开头的 // 两个字符
+	l.readChar()
+	l.readChar()
+	l.mark()
 	for {
-		l.readChar()
 		if l.ch == '\n' || l.ch == 0 {
 			break
 		}
+		l.readChar()
 	}
-	return string(l.ucodes[position:l.position])
+	return l.buildToken(token.COMMENT)
 }
 
 func isIdentifier(ch rune) bool {
@@ -195,8 +229,4 @@ func isIdentifier(ch rune) bool {
 
 func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9'
-}
-
-func newToken(tokenType token.TokenType, ch rune) token.Token {
-	return token.Token{Type: tokenType, Literal: string(ch)}
 }

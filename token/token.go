@@ -58,9 +58,24 @@ const (
 	BREAK    = "break"
 )
 
+type Position struct {
+	Line   int
+	Column int
+}
+
+func (p *Position) Equal(other *Position) bool {
+	return p.Line == other.Line && p.Column == other.Column
+}
+
+func (p *Position) IsZero() bool {
+	return p.Line == 0 && p.Column == 0
+}
+
 type Token struct {
 	Type    TokenType
 	Literal string
+	Start   Position
+	End     Position
 }
 
 func (t *Token) TypeIs(ttype TokenType) bool {
