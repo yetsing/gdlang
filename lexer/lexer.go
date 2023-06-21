@@ -195,12 +195,39 @@ func (l *Lexer) readNumber() token.Token {
 	return l.buildToken(token.INT)
 }
 
+var escapeMap = map[rune]rune{
+	'\\': '\\',
+	'\'': '\'',
+	'"':  '"',
+	'a':  '\a',
+	'b':  '\b',
+	'f':  '\f',
+	'n':  '\n',
+	'r':  '\r',
+	't':  '\t',
+	'v':  '\v',
+}
+
 func (l *Lexer) readString(end rune) token.Token {
+	var buf []rune
 	// 跳过开始的引号
 	l.readChar()
 	for {
-		l.readChar()
-		if l.ch == end || l.ch == 0 {
+		// 参考 Python 的转义字符 https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
+		// 处理转义字符
+		ch := l.ch
+		if ch == '\\' {
+			l.readChar()
+			if actual, ok := escapeMap[l.ch]; ok {
+				buf = append(buf, actual)
+				l.readChar()
+				continue
+			}
+			// 不是转义字符
+			buf = append(buf, ch)
+		}
+
+		if l.ch == end {
 			break
 		}
 		if l.ch == 0 || l.ch == '\n' {
@@ -208,10 +235,14 @@ func (l *Lexer) readString(end rune) token.Token {
 			tok.Literal = "EOL while scanning string literal"
 			return tok
 		}
+		buf = append(buf, l.ch)
+		l.readChar()
 	}
 	// 跳过末尾的引号
 	l.readChar()
-	return l.buildToken(token.STRING)
+	tok := l.buildToken(token.STRING)
+	tok.Literal = string(buf)
+	return tok
 }
 
 func (l *Lexer) readComment() token.Token {

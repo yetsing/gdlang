@@ -38,6 +38,8 @@ a.foo
 'world'
 'hello world'
  var 中文变量名 = "a开发b"
+"中文字符串"
+'转义\'\"\a\b\f\n\r\t\v\d'
 `
 
 	tests := []struct {
@@ -286,6 +288,15 @@ a.foo
 			expectedType: token.STRING, expectedLiteral: "a开发b",
 			expectedStart: token.Position{Line: 30, Column: 13},
 			expectedEnd:   token.Position{Line: 30, Column: 19},
+		},
+		{
+			expectedType: token.STRING, expectedLiteral: "中文字符串",
+			expectedStart: token.Position{Line: 31, Column: 0},
+			expectedEnd:   token.Position{Line: 31, Column: 7},
+		},
+		{
+			expectedType:    token.STRING,
+			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\\d",
 		},
 		{
 			expectedType: token.EOF,
