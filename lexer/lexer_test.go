@@ -288,9 +288,77 @@ a.foo
 			expectedEnd:   token.Position{Line: 30, Column: 19},
 		},
 		{
-			token.EOF, "",
-			token.Position{-1, -1},
-			token.Position{-1, -1},
+			expectedType: token.EOF,
+		},
+	}
+
+	l := New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		if !tok.TypeIs(tt.expectedType) {
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q",
+				i, tt.expectedType, tok.Type)
+		}
+
+		if tok.Literal != tt.expectedLiteral {
+			t.Fatalf("tests[%d] - literal wrong. expected=%q, got=%q",
+				i, tt.expectedLiteral, tok.Literal)
+		}
+
+		// 方便测试，每个都判断行列太麻烦了
+		if tt.expectedStart.IsZero() {
+			continue
+		}
+
+		if !tok.Start.Equal(&tt.expectedStart) {
+			t.Fatalf("tests[%d] - start wrong. expected=%+v, got=%+v",
+				i, tt.expectedStart, tok.Start)
+		}
+
+		if !tok.End.Equal(&tt.expectedEnd) {
+			t.Fatalf("tests[%d] - end wrong. expected=%+v, got=%+v",
+				i, tt.expectedEnd, tok.End)
+		}
+	}
+}
+
+func TestIllegalToken(t *testing.T) {
+	input := `
+"abc
+@
+' 6月21日
+'abc'
+`
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+		expectedStart   token.Position
+		expectedEnd     token.Position
+	}{
+		{
+			token.ILLEGAL, "EOL while scanning string literal",
+			token.Position{1, 0},
+			token.Position{1, 4},
+		},
+		{
+			token.ILLEGAL, "invalid char @",
+			token.Position{2, 0},
+			token.Position{2, 1},
+		},
+		{
+			token.ILLEGAL, "EOL while scanning string literal",
+			token.Position{3, 0},
+			token.Position{3, 7},
+		},
+		{
+			token.STRING, "abc",
+			token.Position{4, 0},
+			token.Position{4, 5},
+		},
+		{
+			expectedType: token.EOF,
 		},
 	}
 

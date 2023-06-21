@@ -108,6 +108,11 @@ func (l *Lexer) NextToken() token.Token {
 			return l.readNumber()
 		} else {
 			ttype = token.ILLEGAL
+			ch := l.ch
+			l.readChar()
+			tok := l.buildToken(token.ILLEGAL)
+			tok.Literal = "invalid char " + string(ch)
+			return tok
 		}
 	}
 
@@ -169,11 +174,6 @@ func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
 		// 移除首尾的引号
 		startIndex++
 		endIndex--
-	case token.EOF:
-		start.Line = -1
-		start.Column = -1
-		end.Line = -1
-		end.Column = -1
 	}
 	tok := token.Token{Type: ttype, Literal: string(l.ucodes[startIndex:endIndex]), Start: start, End: end}
 	return tok
@@ -196,13 +196,17 @@ func (l *Lexer) readNumber() token.Token {
 }
 
 func (l *Lexer) readString(end rune) token.Token {
-	// todo 判断引号是否成对
 	// 跳过开始的引号
 	l.readChar()
 	for {
 		l.readChar()
 		if l.ch == end || l.ch == 0 {
 			break
+		}
+		if l.ch == 0 || l.ch == '\n' {
+			tok := l.buildToken(token.ILLEGAL)
+			tok.Literal = "EOL while scanning string literal"
+			return tok
 		}
 	}
 	// 跳过末尾的引号
