@@ -1,6 +1,8 @@
 package lexer
 
 import (
+	"errors"
+	"strconv"
 	"unicode"
 	"weilang/token"
 )
@@ -142,10 +144,24 @@ func (l *Lexer) readChar() {
 			l.position.Line++
 			l.position.Column = -1
 		}
-		l.index += 1
+		l.index++
 		l.ch = l.ucodes[l.index]
 		l.position.Column++
 	}
+}
+
+func (l *Lexer) advance(n int) {
+	for i := 0; i < n; i++ {
+		l.readChar()
+	}
+}
+
+func (l *Lexer) getString(n int) (string, error) {
+	if l.index+n > len(l.ucodes) {
+		return "", errors.New("not enough char")
+	}
+	s := string(l.ucodes[l.index : l.index+n])
+	return s, nil
 }
 
 func (l *Lexer) peekCharIs(ch rune) bool {
@@ -208,6 +224,15 @@ var escapeMap = map[rune]rune{
 	'v':  '\v',
 }
 
+func parseRune(s string, base int, bitSize int) (rune, error) {
+	n, err := strconv.ParseInt(s, base, bitSize)
+	if err != nil {
+		return 0, err
+	}
+	r := rune(n)
+	return r, nil
+}
+
 func (l *Lexer) readString(end rune) token.Token {
 	var buf []rune
 	// 跳过开始的引号
@@ -223,8 +248,36 @@ func (l *Lexer) readString(end rune) token.Token {
 				l.readChar()
 				continue
 			}
+			// 解析 Unicode 转义字符
+			var ucode rune
+			switch l.ch {
+			case 'x':
+			case 'u':
+			case 'U':
+			case '0', '1', '2', '3', '4', '5', '6', '7':
+				// 解析八进制转义
+				//"\ooo" o 代表八进制字符，最大为 "\377" (255)
+				s, err := l.getString(3)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "unknown escape sequence"
+					return tok
+				}
+				ucode, err = parseRune(s, 8, 8)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "escape sequence is invalid Unicode code point"
+					return tok
+				}
+				l.advance(3)
+			default:
+				tok := l.buildToken(token.ILLEGAL)
+				tok.Literal = "unknown escape sequence"
+				return tok
+			}
 			// 不是转义字符
-			buf = append(buf, ch)
+			buf = append(buf, ucode)
+			continue
 		}
 
 		if l.ch == end {
@@ -232,7 +285,7 @@ func (l *Lexer) readString(end rune) token.Token {
 		}
 		if l.ch == 0 || l.ch == '\n' {
 			tok := l.buildToken(token.ILLEGAL)
-			tok.Literal = "EOL while scanning string literal"
+			tok.Literal = "string literal not terminated"
 			return tok
 		}
 		buf = append(buf, l.ch)

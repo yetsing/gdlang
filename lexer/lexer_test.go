@@ -39,7 +39,7 @@ a.foo
 'hello world'
  var 中文变量名 = "a开发b"
 "中文字符串"
-'转义\'\"\a\b\f\n\r\t\v\d'
+'转义\'\"\a\b\f\n\r\t\v\000'
 `
 
 	tests := []struct {
@@ -296,7 +296,7 @@ a.foo
 		},
 		{
 			expectedType:    token.STRING,
-			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\\d",
+			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000",
 		},
 		{
 			expectedType: token.EOF,
@@ -336,46 +336,57 @@ a.foo
 }
 
 func TestIllegalToken(t *testing.T) {
-	input := `
-"abc
-@
-' 6月21日
-'abc'
-`
+	//	input := `
+	//"abc
+	//@
+	//' 6月21日
+	//'abc'
+	//`
 	tests := []struct {
+		input           string
 		expectedType    token.TokenType
 		expectedLiteral string
 		expectedStart   token.Position
 		expectedEnd     token.Position
 	}{
 		{
-			token.ILLEGAL, "EOL while scanning string literal",
-			token.Position{1, 0},
-			token.Position{1, 4},
+			`"abc`,
+			token.ILLEGAL, "string literal not terminated",
+			token.Position{0, 0},
+			token.Position{0, 3},
 		},
 		{
+			`@`,
 			token.ILLEGAL, "invalid char @",
-			token.Position{2, 0},
-			token.Position{2, 1},
+			token.Position{0, 0},
+			token.Position{0, 0},
 		},
 		{
-			token.ILLEGAL, "EOL while scanning string literal",
-			token.Position{3, 0},
-			token.Position{3, 7},
+			`' 6月21日`,
+			token.ILLEGAL, "string literal not terminated",
+			token.Position{0, 0},
+			token.Position{0, 6},
 		},
 		{
-			token.STRING, "abc",
-			token.Position{4, 0},
-			token.Position{4, 5},
+			`'\d'`,
+			token.ILLEGAL, "unknown escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 2},
 		},
 		{
-			expectedType: token.EOF,
+			`'\777'`,
+			token.ILLEGAL, "escape sequence is invalid Unicode code point",
+			token.Position{0, 0},
+			token.Position{0, 2},
 		},
 	}
 
-	l := New(input)
+	//tmp := `\t\123`
+	//tmp2 := "\t\407"
+	//fmt.Printf("tmp: %q, tmp2: %q\n", tmp, tmp2)
 
 	for i, tt := range tests {
+		l := New(tt.input)
 		tok := l.NextToken()
 
 		if !tok.TypeIs(tt.expectedType) {
@@ -386,11 +397,6 @@ func TestIllegalToken(t *testing.T) {
 		if tok.Literal != tt.expectedLiteral {
 			t.Fatalf("tests[%d] - literal wrong. expected=%q, got=%q",
 				i, tt.expectedLiteral, tok.Literal)
-		}
-
-		// 方便测试，每个都判断行列太麻烦了
-		if tt.expectedStart.IsZero() {
-			continue
 		}
 
 		if !tok.Start.Equal(&tt.expectedStart) {
