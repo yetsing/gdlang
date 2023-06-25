@@ -1,8 +1,6 @@
 package lexer
 
 import (
-	"fmt"
-	"strconv"
 	"testing"
 
 	"weilang/token"
@@ -41,7 +39,8 @@ a.foo
 'hello world'
  var 中文变量名 = "a开发b"
 "中文字符串"
-'转义\'\"\a\b\f\n\r\t\v\000\x00\xFF'
+'转义\'\"\a\b\f\n\r\t\v\000\x00\xFF\u0000\uabcd\uffff'
+"\u0000\uabcd\uffff\U00000000\U00012345"
 `
 
 	tests := []struct {
@@ -299,7 +298,11 @@ a.foo
 		{
 			expectedType: token.STRING,
 			// go 大于 \x7f 的转义都会变成 65533
-			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000\x00\u00ff",
+			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000\x00\u00ff\u0000\uabcd\uFFFF",
+		},
+		{
+			expectedType:    token.STRING,
+			expectedLiteral: "\u0000\uabcd\uFFFF\U00000000\U00012345",
 		},
 		{
 			expectedType: token.EOF,
@@ -406,15 +409,31 @@ func TestIllegalToken(t *testing.T) {
 			token.Position{0, 0},
 			token.Position{0, 3},
 		},
+		{
+			`'\u'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			`'\u111'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			`'\uabct'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			`'\U12345678'`,
+			token.ILLEGAL, "escape sequence is invalid Unicode code point",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
 	}
-
-	n, err := strconv.ParseInt("8a", 16, 32)
-	fmt.Printf("n: %d, err: %v\n", n, err)
-	fmt.Printf("n: %s, err: %v\n", "\xff", nil)
-
-	//tmp := `\t\123`
-	//tmp2 := "\t\407"
-	//fmt.Printf("tmp: %q, tmp2: %q\n", tmp, tmp2)
 
 	for i, tt := range tests {
 		l := New(tt.input)

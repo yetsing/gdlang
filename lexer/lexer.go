@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"unicode"
+	"unicode/utf8"
 	"weilang/token"
 )
 
@@ -248,12 +249,14 @@ func (l *Lexer) readString(end rune) token.Token {
 			}
 			// 解析 Unicode 转义字符
 			var ucode rune
+			var codeLen int
 			switch l.ch {
 			case 'x':
 				// 格式为 "\xhh" h 代表十六进制字符
 				// 跳过 'x' 字符
 				l.readChar()
-				s, err := l.getString(2)
+				codeLen = 2
+				s, err := l.getString(codeLen)
 				if err != nil {
 					tok := l.buildToken(token.ILLEGAL)
 					tok.Literal = "illegal escape sequence"
@@ -265,12 +268,44 @@ func (l *Lexer) readString(end rune) token.Token {
 					tok.Literal = "illegal escape sequence"
 					return tok
 				}
-				l.advance(2)
 			case 'u':
+				// 格式为 "\uhhhh" h 代表十六进制字符
+				// 跳过 'u' 字符
+				l.readChar()
+				codeLen = 4
+				s, err := l.getString(codeLen)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
+				ucode, err = parseRune(s, 16, 16)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
 			case 'U':
+				// 格式为 "\Uhhhhhhhh" h 代表十六进制字符
+				// 跳过 'u' 字符
+				l.readChar()
+				codeLen = 8
+				s, err := l.getString(codeLen)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
+				ucode, err = parseRune(s, 16, 32)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
 			case '0', '1', '2', '3', '4', '5', '6', '7':
 				// 格式为 "\ooo" o 代表八进制字符，最大为 "\377" (255)
-				s, err := l.getString(3)
+				codeLen = 3
+				s, err := l.getString(codeLen)
 				if err != nil {
 					tok := l.buildToken(token.ILLEGAL)
 					tok.Literal = "illegal escape sequence"
@@ -282,14 +317,19 @@ func (l *Lexer) readString(end rune) token.Token {
 					tok.Literal = "illegal escape sequence"
 					return tok
 				}
-				l.advance(3)
 			default:
 				// 非法转义字符
 				tok := l.buildToken(token.ILLEGAL)
 				tok.Literal = "illegal escape sequence"
 				return tok
 			}
+			if !utf8.ValidRune(ucode) {
+				tok := l.buildToken(token.ILLEGAL)
+				tok.Literal = "escape sequence is invalid Unicode code point"
+				return tok
+			}
 			buf = append(buf, ucode)
+			l.advance(codeLen)
 			continue
 		}
 
