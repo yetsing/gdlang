@@ -123,9 +123,7 @@ func (l *Lexer) NextToken() token.Token {
 }
 
 func (l *Lexer) init() {
-	for _, u := range l.input {
-		l.ucodes = append(l.ucodes, u)
-	}
+	l.ucodes = []rune(l.input)
 	l.position.Line = 0
 	l.position.Column = -1
 }
@@ -225,7 +223,7 @@ var escapeMap = map[rune]rune{
 }
 
 func parseRune(s string, base int, bitSize int) (rune, error) {
-	n, err := strconv.ParseInt(s, base, bitSize)
+	n, err := strconv.ParseUint(s, base, bitSize)
 	if err != nil {
 		return 0, err
 	}
@@ -252,30 +250,45 @@ func (l *Lexer) readString(end rune) token.Token {
 			var ucode rune
 			switch l.ch {
 			case 'x':
+				// 格式为 "\xhh" h 代表十六进制字符
+				// 跳过 'x' 字符
+				l.readChar()
+				s, err := l.getString(2)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
+				ucode, err = parseRune(s, 16, 8)
+				if err != nil {
+					tok := l.buildToken(token.ILLEGAL)
+					tok.Literal = "illegal escape sequence"
+					return tok
+				}
+				l.advance(2)
 			case 'u':
 			case 'U':
 			case '0', '1', '2', '3', '4', '5', '6', '7':
-				// 解析八进制转义
-				//"\ooo" o 代表八进制字符，最大为 "\377" (255)
+				// 格式为 "\ooo" o 代表八进制字符，最大为 "\377" (255)
 				s, err := l.getString(3)
 				if err != nil {
 					tok := l.buildToken(token.ILLEGAL)
-					tok.Literal = "unknown escape sequence"
+					tok.Literal = "illegal escape sequence"
 					return tok
 				}
 				ucode, err = parseRune(s, 8, 8)
 				if err != nil {
 					tok := l.buildToken(token.ILLEGAL)
-					tok.Literal = "escape sequence is invalid Unicode code point"
+					tok.Literal = "illegal escape sequence"
 					return tok
 				}
 				l.advance(3)
 			default:
+				// 非法转义字符
 				tok := l.buildToken(token.ILLEGAL)
-				tok.Literal = "unknown escape sequence"
+				tok.Literal = "illegal escape sequence"
 				return tok
 			}
-			// 不是转义字符
 			buf = append(buf, ucode)
 			continue
 		}

@@ -1,6 +1,8 @@
 package lexer
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
 
 	"weilang/token"
@@ -39,7 +41,7 @@ a.foo
 'hello world'
  var 中文变量名 = "a开发b"
 "中文字符串"
-'转义\'\"\a\b\f\n\r\t\v\000'
+'转义\'\"\a\b\f\n\r\t\v\000\x00\xFF'
 `
 
 	tests := []struct {
@@ -295,8 +297,9 @@ a.foo
 			expectedEnd:   token.Position{Line: 31, Column: 7},
 		},
 		{
-			expectedType:    token.STRING,
-			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000",
+			expectedType: token.STRING,
+			// go 大于 \x7f 的转义都会变成 65533
+			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000\x00\u00ff",
 		},
 		{
 			expectedType: token.EOF,
@@ -369,17 +372,45 @@ func TestIllegalToken(t *testing.T) {
 		},
 		{
 			`'\d'`,
-			token.ILLEGAL, "unknown escape sequence",
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 2},
+		},
+		{
+			`'\1'`,
+			token.ILLEGAL, "illegal escape sequence",
 			token.Position{0, 0},
 			token.Position{0, 2},
 		},
 		{
 			`'\777'`,
-			token.ILLEGAL, "escape sequence is invalid Unicode code point",
+			token.ILLEGAL, "illegal escape sequence",
 			token.Position{0, 0},
 			token.Position{0, 2},
 		},
+		{
+			`'\x'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			`'\x1'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			`'\xgg'`,
+			token.ILLEGAL, "illegal escape sequence",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
 	}
+
+	n, err := strconv.ParseInt("8a", 16, 32)
+	fmt.Printf("n: %d, err: %v\n", n, err)
+	fmt.Printf("n: %s, err: %v\n", "\xff", nil)
 
 	//tmp := `\t\123`
 	//tmp2 := "\t\407"
@@ -390,8 +421,8 @@ func TestIllegalToken(t *testing.T) {
 		tok := l.NextToken()
 
 		if !tok.TypeIs(tt.expectedType) {
-			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q",
-				i, tt.expectedType, tok.Type)
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q %q",
+				i, tt.expectedType, tok.Type, tok.Literal)
 		}
 
 		if tok.Literal != tt.expectedLiteral {
