@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"testing"
 
 	"weilang/token"
@@ -46,6 +47,9 @@ while(1) {
     continue
     break
 }
+0b10 0B_1000_1111___
+0o17 0O_7_7_7_7
+0x1234 0X_1_2_3_4 0xabcdef 0XABCDEF
 `
 
 	tests := []struct {
@@ -346,6 +350,38 @@ while(1) {
 			expectedLiteral: "}",
 		},
 		{
+			expectedType:    token.INT,
+			expectedLiteral: "0b10",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0b10001111",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0o17",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0o7777",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0x1234",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0x1234",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0xabcdef",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "0xABCDEF",
+		},
+		{
 			expectedType: token.EOF,
 		},
 	}
@@ -502,6 +538,9 @@ func TestIllegalToken(t *testing.T) {
 			token.Position{0, 4},
 		},
 	}
+
+	n := 123
+	fmt.Println("n", n)
 
 	for i, tt := range tests {
 		l := New(tt.input)

@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
@@ -159,7 +160,7 @@ func (l *Lexer) advance(n int) {
 
 func (l *Lexer) getString(n int) (string, error) {
 	if l.index+n > len(l.ucodes) {
-		return "", errors.New("not enough char")
+		return string(l.ucodes[l.index:len(l.ucodes)]), errors.New("not enough char")
 	}
 	s := string(l.ucodes[l.index : l.index+n])
 	return s, nil
@@ -209,10 +210,46 @@ func (l *Lexer) readIdentifier() token.Token {
 }
 
 func (l *Lexer) readNumber() token.Token {
-	for isDigit(l.ch) {
+	var buf []rune
+	check := isDigit
+	prefix, _ := l.getString(2)
+	category := "decimal"
+	switch prefix {
+	case "0b", "0B":
+		check = isBindigit
+		buf = append(buf, '0', 'b')
+		category = "binary"
+		l.advance(2)
+	case "0o", "0O":
+		check = isOctDigit
+		buf = append(buf, '0', 'o')
+		category = "octal"
+		l.advance(2)
+	case "0x", "0X":
+		check = isHexdigit
+		buf = append(buf, '0', 'x')
+		category = "hexadecimal"
+		l.advance(2)
+	}
+	for {
+		if l.ch == '_' {
+			l.readChar()
+			continue
+		}
+		if !isHexdigit(l.ch) {
+			break
+		}
+		if !check(l.ch) {
+			tok := l.buildToken(token.ILLEGAL)
+			tok.Literal = fmt.Sprintf("invalid digit '%s' in %s literal", string(l.ch), category)
+			return tok
+		}
+		buf = append(buf, l.ch)
 		l.readChar()
 	}
-	return l.buildToken(token.INT)
+	tok := l.buildToken(token.INT)
+	tok.Literal = string(buf)
+	return tok
 }
 
 var escapeMap = map[rune]rune{
@@ -436,6 +473,18 @@ func isIdentifierContinue(ch rune) bool {
 
 func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9'
+}
+
+func isBindigit(ch rune) bool {
+	return ch == '0' || ch == '1'
+}
+
+func isOctDigit(ch rune) bool {
+	return '0' <= ch && ch <= '7'
+}
+
+func isHexdigit(ch rune) bool {
+	return ('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F')
 }
 
 // UnicodeCategory returns the Unicode Character Category of the given rune.
