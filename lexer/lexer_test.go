@@ -41,6 +41,11 @@ a.foo
 "中文字符串"
 '转义\'\"\a\b\f\n\r\t\v\000\x00\xFF\u0000\uabcd\uffff'
 "\u0000\uabcd\uffff\U00000000\U00012345"
+while(1) {
+    statement
+    continue
+    break
+}
 `
 
 	tests := []struct {
@@ -305,6 +310,42 @@ a.foo
 			expectedLiteral: "\u0000\uabcd\uFFFF\U00000000\U00012345",
 		},
 		{
+			expectedType:    token.WHILE,
+			expectedLiteral: "while",
+		},
+		{
+			expectedType:    token.LPAREN,
+			expectedLiteral: "(",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "1",
+		},
+		{
+			expectedType:    token.RPAREN,
+			expectedLiteral: ")",
+		},
+		{
+			expectedType:    token.LBRACE,
+			expectedLiteral: "{",
+		},
+		{
+			expectedType:    token.IDENT,
+			expectedLiteral: "statement",
+		},
+		{
+			expectedType:    token.CONTINUE,
+			expectedLiteral: "continue",
+		},
+		{
+			expectedType:    token.BREAK,
+			expectedLiteral: "break",
+		},
+		{
+			expectedType:    token.RBRACE,
+			expectedLiteral: "}",
+		},
+		{
 			expectedType: token.EOF,
 		},
 	}
@@ -338,6 +379,27 @@ a.foo
 			t.Fatalf("tests[%d] - end wrong. expected=%+v, got=%+v",
 				i, tt.expectedEnd, tok.End)
 		}
+	}
+
+	input2 := "`abc\n\\u1234`"
+	expected := struct {
+		Type    token.TokenType
+		Literal string
+	}{
+		token.STRING,
+		"abc\n\\u1234",
+	}
+	l = New(input2)
+	tok := l.NextToken()
+
+	if !tok.TypeIs(expected.Type) {
+		t.Fatalf("tokentype wrong. expected=%q, got=%q",
+			expected.Type, tok.Type)
+	}
+
+	if tok.Literal != expected.Literal {
+		t.Fatalf("literal wrong. expected=%q, got=%q",
+			expected.Literal, tok.Literal)
 	}
 }
 
@@ -432,6 +494,12 @@ func TestIllegalToken(t *testing.T) {
 			token.ILLEGAL, "escape sequence is invalid Unicode code point",
 			token.Position{0, 0},
 			token.Position{0, 3},
+		},
+		{
+			"`abcd",
+			token.ILLEGAL, "string literal not terminated",
+			token.Position{0, 0},
+			token.Position{0, 4},
 		},
 	}
 

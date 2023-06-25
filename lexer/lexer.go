@@ -96,6 +96,8 @@ func (l *Lexer) NextToken() token.Token {
 		return l.readString(l.ch)
 	case '\'':
 		return l.readString(l.ch)
+	case '`':
+		return l.readRawString()
 	case '[':
 		ttype = token.LBRACKET
 	case ']':
@@ -136,14 +138,14 @@ func (l *Lexer) skipWhitespace() {
 }
 
 func (l *Lexer) readChar() {
-	if l.index >= len(l.ucodes)-1 {
+	l.index++
+	if l.index >= len(l.ucodes) {
 		l.ch = 0
 	} else {
 		if l.ch == '\n' {
 			l.position.Line++
 			l.position.Column = -1
 		}
-		l.index++
 		l.ch = l.ucodes[l.index]
 		l.position.Column++
 	}
@@ -189,6 +191,9 @@ func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
 		// 移除首尾的引号
 		startIndex++
 		endIndex--
+	case token.EOF:
+		// 确保 EOF token 的 Literal 为空字符串
+		endIndex = startIndex
 	}
 	tok := token.Token{Type: ttype, Literal: string(l.ucodes[startIndex:endIndex]), Start: start, End: end}
 	return tok
@@ -349,6 +354,25 @@ func (l *Lexer) readString(end rune) token.Token {
 	tok := l.buildToken(token.STRING)
 	tok.Literal = string(buf)
 	return tok
+}
+
+func (l *Lexer) readRawString() token.Token {
+	// 跳过开始的引号
+	l.readChar()
+	for {
+		if l.ch == 0 {
+			tok := l.buildToken(token.ILLEGAL)
+			tok.Literal = "string literal not terminated"
+			return tok
+		}
+		if l.ch == '`' {
+			break
+		}
+		l.readChar()
+	}
+	// 跳过结尾的引号
+	l.readChar()
+	return l.buildToken(token.STRING)
 }
 
 func (l *Lexer) readComment() token.Token {
