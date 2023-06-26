@@ -68,16 +68,76 @@ func (p *Parser) statement() (ast.Statement, error) {
 	return stmt, nil
 }
 
-// expression ::= atom (("+" | "-") atom)*
+/*
+表达式语法规则
+	每个优先级都有一个语法表示，里面包含本级的所有运算符和更高优先级的表示
+	最后会有一个最底层的表示，代表表达式里面的基本单元，例如下面的 atom
+*/
+
+// expression ::= plus_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) plus_expression)*
 func (p *Parser) expression() (ast.Expression, error) {
 	tok := p.currToken
-	expr, err := p.atom()
+	expr, err := p.plusExpression()
+	if err != nil {
+		return nil, err
+	}
+	optypes := []token.TokenType{
+		token.LESS_THAN, token.LESS_EQUAL_THAN, token.GREAT_THAN, token.GREAT_EQUAL_THAN,
+		token.NOT_EQ, token.EQ,
+	}
+	for p.currTokenIn(optypes...) {
+		op := p.currToken.Literal
+		_ = p.eatIn(optypes...)
+		right, err := p.plusExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// plus_expression ::= multiplication_expression (("+" | "-") multiplication_expression)*
+// 加法类表达式
+func (p *Parser) plusExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.multiplyExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIn(token.PLUS, token.MINUS) {
 		op := p.currToken.Literal
 		_ = p.eatIn(token.PLUS, token.MINUS)
+		right, err := p.multiplyExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// multiply_expression ::= atom (("*" | "/" | "%") atom)*
+// 乘法类表达式
+func (p *Parser) multiplyExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIn(token.ASTERISK, token.SLASH, token.MODULO) {
+		op := p.currToken.Literal
+		_ = p.eatIn(token.ASTERISK, token.SLASH, token.MODULO)
 		right, err := p.atom()
 		if err != nil {
 			return nil, err
@@ -92,7 +152,7 @@ func (p *Parser) expression() (ast.Expression, error) {
 	return expr, nil
 }
 
-// atom ::= IDENT | INT_LIT | STRING_LIT
+// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_INT
 // 语法中的最小单元
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
@@ -136,6 +196,12 @@ func (p *Parser) atom() (ast.Expression, error) {
 			Value: p.currToken.Literal,
 		}
 		_ = p.eat(token.STRING)
+	case token.TRUE, token.FALSE:
+		expr = &ast.Boolean{
+			Token: p.currToken,
+			Value: p.currToken.Literal == "true",
+		}
+		_ = p.eatIn(token.TRUE, token.FALSE)
 	default:
 		return nil, p.syntaxError("invalid syntax")
 	}
