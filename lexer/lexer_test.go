@@ -49,7 +49,8 @@ while(1) {
 }
 0b10 0B_1000_1111___
 0o17 0O_7_7_7_7
-0x1234 0X_1_2_3_4 0xabcdef 0XABCDEF
+0x1234 0X_1_2_3_4 0xabcdef 0XABCDEF____
+1___234
 `
 
 	tests := []struct {
@@ -382,6 +383,10 @@ while(1) {
 			expectedLiteral: "0xABCDEF",
 		},
 		{
+			expectedType:    token.INT,
+			expectedLiteral: "1234",
+		},
+		{
 			expectedType: token.EOF,
 		},
 	}
@@ -536,6 +541,30 @@ func TestIllegalToken(t *testing.T) {
 			token.ILLEGAL, "string literal not terminated",
 			token.Position{0, 0},
 			token.Position{0, 4},
+		},
+		{
+			"0c123",
+			token.ILLEGAL, "invalid digit 'c' in decimal literal",
+			token.Position{0, 0},
+			token.Position{0, 1},
+		},
+		{
+			"0b1_0_2",
+			token.ILLEGAL, "invalid digit '2' in binary literal",
+			token.Position{0, 0},
+			token.Position{0, 6},
+		},
+		{
+			"0O18",
+			token.ILLEGAL, "invalid digit '8' in octal literal",
+			token.Position{0, 0},
+			token.Position{0, 3},
+		},
+		{
+			"0x1g",
+			token.ILLEGAL, "invalid digit 'g' in hexadecimal literal",
+			token.Position{0, 0},
+			token.Position{0, 3},
 		},
 	}
 

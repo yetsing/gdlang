@@ -236,7 +236,7 @@ func (l *Lexer) readNumber() token.Token {
 			l.readChar()
 			continue
 		}
-		if !isHexdigit(l.ch) {
+		if !isLetterAndDigit(l.ch) {
 			break
 		}
 		if !check(l.ch) {
@@ -485,6 +485,10 @@ func isOctDigit(ch rune) bool {
 
 func isHexdigit(ch rune) bool {
 	return ('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F')
+}
+
+func isLetterAndDigit(ch rune) bool {
+	return ('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z')
 }
 
 // UnicodeCategory returns the Unicode Character Category of the given rune.
