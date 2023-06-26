@@ -249,6 +249,10 @@ func (l *Lexer) readNumber() token.Token {
 	}
 	tok := l.buildToken(token.INT)
 	tok.Literal = string(buf)
+	if tok.Literal == "0b" || tok.Literal == "0o" || tok.Literal == "0x" {
+		tok.Type = token.ILLEGAL
+		tok.Literal = fmt.Sprintf("%s literal has no digits", category)
+	}
 	return tok
 }
 

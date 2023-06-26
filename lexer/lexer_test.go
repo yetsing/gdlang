@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"fmt"
 	"testing"
 
 	"weilang/token"
@@ -566,10 +565,13 @@ func TestIllegalToken(t *testing.T) {
 			token.Position{0, 0},
 			token.Position{0, 3},
 		},
+		{
+			"0x",
+			token.ILLEGAL, "hexadecimal literal has no digits",
+			token.Position{0, 0},
+			token.Position{0, 1},
+		},
 	}
-
-	n := 123
-	fmt.Println("n", n)
 
 	for i, tt := range tests {
 		l := New(tt.input)

@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	START_PROMPT    = ">> "
-	CONTINUE_PROMPT = "..."
+	START_PROMPT = ">> "
+	//CONTINUE_PROMPT = "..."
 )
 
 var PROMPT = START_PROMPT
@@ -21,7 +21,7 @@ func Start(in io.Reader, out io.Writer) {
 
 	var buffer bytes.Buffer
 	for {
-		fmt.Fprintf(out, PROMPT)
+		_, _ = fmt.Fprintf(out, PROMPT)
 		scanned := scanner.Scan()
 		if !scanned {
 			return
