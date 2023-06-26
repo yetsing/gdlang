@@ -56,19 +56,45 @@ func (p *Parser) program() (*ast.Program, error) {
 
 // statement ::= expr [";"]
 func (p *Parser) statement() (ast.Statement, error) {
-	stmt, err := p.expression()
+	stmt := &ast.ExpressionStatement{Token: p.currToken}
+	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
+	stmt.Expression = expr
 	if p.currTokenIs(token.SEMICOLON) {
 		_ = p.eat(token.SEMICOLON)
 	}
 	return stmt, nil
 }
 
-// expression ::= IDENT | INT_LIT | STRING_LIT
-func (p *Parser) expression() (*ast.ExpressionStatement, error) {
-	stmt := &ast.ExpressionStatement{Token: p.currToken}
+// expression ::= atom (("+" | "-") atom)*
+func (p *Parser) expression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIn(token.PLUS, token.MINUS) {
+		op := p.currToken.Literal
+		_ = p.eatIn(token.PLUS, token.MINUS)
+		right, err := p.atom()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// atom ::= IDENT | INT_LIT | STRING_LIT
+// 语法中的最小单元
+func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	switch p.currToken.Type {
 	case token.IDENT:
@@ -110,9 +136,19 @@ func (p *Parser) expression() (*ast.ExpressionStatement, error) {
 			Value: p.currToken.Literal,
 		}
 		_ = p.eat(token.STRING)
+	default:
+		return nil, p.syntaxError("invalid syntax")
 	}
-	stmt.Expression = expr
-	return stmt, nil
+	return expr, nil
+}
+
+func (p *Parser) eatIn(ts ...token.TokenType) error {
+	if p.currTokenIn(ts...) {
+		p.nextToken()
+		return nil
+	} else {
+		return p.expectError(ts[0])
+	}
 }
 
 func (p *Parser) eat(t token.TokenType) error {
@@ -128,10 +164,18 @@ func (p *Parser) nextToken() {
 	p.currToken = p.l.NextToken()
 }
 
+func (p *Parser) currTokenIn(ts ...token.TokenType) bool {
+	return p.currToken.TypeIn(ts...)
+}
+
 func (p *Parser) currTokenIs(t token.TokenType) bool {
 	return p.currToken.TypeIs(t)
 }
 
 func (p *Parser) expectError(expected token.TokenType) error {
 	return fmt.Errorf("expected %s, but got %s", expected, p.currToken.Type)
+}
+
+func (p *Parser) syntaxError(msg string) error {
+	return fmt.Errorf(msg)
 }

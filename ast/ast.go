@@ -61,6 +61,28 @@ type Expression interface {
 
 // Expression 下面的是表达式节点
 
+// BinaryOpExpression 二元操作表达式，如 "1 + 2"
+type BinaryOpExpression struct {
+	Token    token.Token
+	Left     Expression
+	Operator string
+	Right    Expression
+}
+
+func (be *BinaryOpExpression) expressionNode()      {}
+func (be *BinaryOpExpression) TokenLiteral() string { return be.Token.Literal }
+func (be *BinaryOpExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(be.Left.String())
+	out.WriteString(" " + be.Operator + " ")
+	out.WriteString(be.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
 type Identifier struct {
 	Token token.Token // the token.IDENT token
 	Value string
