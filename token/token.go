@@ -43,6 +43,14 @@ const (
 	LBRACKET = "["
 	RBRACKET = "]"
 
+	// 位操作
+	LEFT_SHIFT  = "<<"
+	RIGHT_SHIFT = ">>"
+	BITWISE_AND = "&"
+	BITWISE_XOR = "^"
+	BITWISE_OR  = "|"
+	BITWISE_NOT = "~"
+
 	// Keywords
 	FUNCTION = "FUNCTION"
 	TRUE     = "TRUE"
