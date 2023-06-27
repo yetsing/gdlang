@@ -50,6 +50,9 @@ while(1) {
 0o17 0O_7_7_7_7
 0x1234 0X_1_2_3_4 0xabcdef 0XABCDEF____
 1___234
+1<<2
+1>>2
+1&^|~2
 `
 
 	tests := []struct {
@@ -384,6 +387,54 @@ while(1) {
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "1234",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "1",
+		},
+		{
+			expectedType:    token.LEFT_SHIFT,
+			expectedLiteral: "<<",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "2",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "1",
+		},
+		{
+			expectedType:    token.RIGHT_SHIFT,
+			expectedLiteral: ">>",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "2",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "1",
+		},
+		{
+			expectedType:    token.BITWISE_AND,
+			expectedLiteral: "&",
+		},
+		{
+			expectedType:    token.BITWISE_XOR,
+			expectedLiteral: "^",
+		},
+		{
+			expectedType:    token.BITWISE_OR,
+			expectedLiteral: "|",
+		},
+		{
+			expectedType:    token.BITWISE_NOT,
+			expectedLiteral: "~",
+		},
+		{
+			expectedType:    token.INT,
+			expectedLiteral: "2",
 		},
 		{
 			expectedType: token.EOF,

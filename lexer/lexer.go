@@ -69,6 +69,9 @@ func (l *Lexer) NextToken() token.Token {
 		if l.peekCharIs('=') {
 			l.readChar()
 			ttype = token.LESS_EQUAL_THAN
+		} else if l.peekCharIs('<') {
+			l.readChar()
+			ttype = token.LEFT_SHIFT
 		} else {
 			ttype = token.LESS_THAN
 		}
@@ -76,9 +79,20 @@ func (l *Lexer) NextToken() token.Token {
 		if l.peekCharIs('=') {
 			l.readChar()
 			ttype = token.GREAT_EQUAL_THAN
+		} else if l.peekCharIs('>') {
+			l.readChar()
+			ttype = token.RIGHT_SHIFT
 		} else {
 			ttype = token.GREAT_THAN
 		}
+	case '~':
+		ttype = token.BITWISE_NOT
+	case '&':
+		ttype = token.BITWISE_AND
+	case '^':
+		ttype = token.BITWISE_XOR
+	case '|':
+		ttype = token.BITWISE_OR
 	case ';':
 		ttype = token.SEMICOLON
 	case ':':
