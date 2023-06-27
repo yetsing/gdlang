@@ -53,6 +53,7 @@ while(1) {
 1<<2
 1>>2
 1&^|~2
+not and or
 `
 
 	tests := []struct {
@@ -435,6 +436,18 @@ while(1) {
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "2",
+		},
+		{
+			expectedType:    token.NOT,
+			expectedLiteral: "not",
+		},
+		{
+			expectedType:    token.AND,
+			expectedLiteral: "and",
+		},
+		{
+			expectedType:    token.OR,
+			expectedLiteral: "or",
 		},
 		{
 			expectedType: token.EOF,

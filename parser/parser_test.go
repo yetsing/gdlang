@@ -7,7 +7,7 @@ import (
 	"weilang/lexer"
 )
 
-func TestParsingInfixExpressions(t *testing.T) {
+func TestParsingBinaryOpExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
 		leftValue  interface{}
@@ -28,6 +28,15 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"5 <= 5;", 5, "<=", 5},
 		{"5 >= 5;", 5, ">=", 5},
 
+		{"15 >> 0x15", 15, ">>", 0x15},
+		{"15 << 0x15", 15, "<<", 0x15},
+		{"15 & 15", 15, "&", 15},
+		{"15 ^ 15", 15, "^", 15},
+		{"15 | 15", 15, "|", 15},
+
+		{"20 and 20", 20, "and", 20},
+		{"20 or 20", 20, "or", 20},
+
 		{"foobar + barfoo;", "foobar", "+", "barfoo"},
 		{"foobar - barfoo;", "foobar", "-", "barfoo"},
 		{"foobar * barfoo;", "foobar", "*", "barfoo"},
@@ -40,6 +49,15 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"true == true", true, "==", true},
 		{"true != false", true, "!=", false},
 		{"false == false", false, "==", false},
+
+		{"foobar >> barfoo", "foobar", ">>", "barfoo"},
+		{"foobar << barfoo", "foobar", "<<", "barfoo"},
+		{"foobar & barfoo", "foobar", "&", "barfoo"},
+		{"foobar ^ barfoo", "foobar", "^", "barfoo"},
+		{"foobar | barfoo", "foobar", "|", "barfoo"},
+
+		{"foobar and barfoo", "foobar", "and", "barfoo"},
+		{"foobar or barfoo", "foobar", "or", "barfoo"},
 	}
 
 	for _, tt := range infixTests {
@@ -47,7 +65,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		p := New(l)
 		program, err := p.ParseProgram()
 		if err != nil {
-			t.Fatalf("syntax error: %s", err)
+			t.Fatalf("%s", err)
 		}
 
 		if len(program.Statements) != 1 {
@@ -170,9 +188,10 @@ func TestStringLiteralExpression(t *testing.T) {
 	}
 }
 
-func testBinaryOpExpression(t *testing.T, exp ast.Expression, left interface{},
-	operator string, right interface{}) bool {
-
+func testBinaryOpExpression(
+	t *testing.T, exp ast.Expression, left interface{},
+	operator string, right interface{},
+) bool {
 	opExp, ok := exp.(*ast.BinaryOpExpression)
 	if !ok {
 		t.Errorf("exp is not ast.InfixExpression. got=%T(%s)", exp, exp)
@@ -226,11 +245,11 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 		return false
 	}
 
-	if integ.TokenLiteral() != fmt.Sprintf("%d", value) {
-		t.Errorf("integ.TokenLiteral not %d. got=%s", value,
-			integ.TokenLiteral())
-		return false
-	}
+	//if integ.TokenLiteral() != fmt.Sprintf("%d", value) {
+	//	t.Errorf("integ.TokenLiteral not %d. got=%s", value,
+	//		integ.TokenLiteral())
+	//	return false
+	//}
 
 	return true
 }

@@ -72,12 +72,102 @@ func (p *Parser) statement() (ast.Statement, error) {
 表达式语法规则
 	每个优先级都有一个语法表示，里面包含本级的所有运算符和更高优先级的表示
 	最后会有一个最底层的表示，代表表达式里面的基本单元，例如下面的 atom
+
+运算符优先级参照 Python
+https://docs.python.org/3/reference/expressions.html#operator-precedence
 */
 
-// expression ::= plus_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) plus_expression)*
+// expression 解析表达式
+//
+// expression ::= orExpression
 func (p *Parser) expression() (ast.Expression, error) {
+	return p.orExpression()
+}
+
+// orExpression 解析 or 逻辑表达式
+//
+// or_expression ::= and_expression ("or" and_expression)*
+func (p *Parser) orExpression() (ast.Expression, error) {
 	tok := p.currToken
-	expr, err := p.plusExpression()
+	expr, err := p.andExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.OR) {
+		op := p.currToken.Literal
+		_ = p.eat(token.OR)
+		right, err := p.andExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// andExpression 解析 and 逻辑表达式
+//
+// and_expression ::= not_expression ("and" not_expression)*
+func (p *Parser) andExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.notExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.AND) {
+		op := p.currToken.Literal
+		_ = p.eat(token.AND)
+		right, err := p.notExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// notExpression 解析 not 逻辑表达式
+//
+// not_expression ::= comparison_expression ("not" comparison_expression)*
+func (p *Parser) notExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.comparisonExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.NOT) {
+		op := p.currToken.Literal
+		_ = p.eat(token.NOT)
+		right, err := p.comparisonExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// comparisonExpression 解析关系表达式
+//
+// comparison_expression ::= shift_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) shift_expression)*
+func (p *Parser) comparisonExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.bitwiseOrExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +178,110 @@ func (p *Parser) expression() (ast.Expression, error) {
 	for p.currTokenIn(optypes...) {
 		op := p.currToken.Literal
 		_ = p.eatIn(optypes...)
+		right, err := p.bitwiseOrExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// bitwiseOrExpression 解析与操作表达式
+//
+// bitwise_or_expression ::= bitwise_xor_expression ( "|" bitwise_xor_expression)*
+func (p *Parser) bitwiseOrExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.bitwiseXorExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.BITWISE_OR) {
+		op := p.currToken.Literal
+		_ = p.eat(token.BITWISE_OR)
+		right, err := p.bitwiseXorExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// bitwiseXorExpression 解析与操作表达式
+//
+// bitwise_xor_expression ::= bitwise_and_expression ( "^" bitwise_and_expression)*
+func (p *Parser) bitwiseXorExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.bitwiseAndExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.BITWISE_XOR) {
+		op := p.currToken.Literal
+		_ = p.eat(token.BITWISE_XOR)
+		right, err := p.bitwiseAndExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// bitwiseAndExpression 解析与操作表达式
+//
+// bitwise_and_expression ::= shift_expression ( "&" shift_expression)*
+func (p *Parser) bitwiseAndExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.shiftExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIs(token.BITWISE_AND) {
+		op := p.currToken.Literal
+		_ = p.eat(token.BITWISE_AND)
+		right, err := p.shiftExpression()
+		if err != nil {
+			return nil, err
+		}
+		expr = &ast.BinaryOpExpression{
+			Token:    tok,
+			Left:     expr,
+			Operator: op,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+// shiftExpression 解析移位表达式
+//
+// shift_expression ::= plus_expression (( "<<" | ">>" ) plus_expression)*
+func (p *Parser) shiftExpression() (ast.Expression, error) {
+	tok := p.currToken
+	expr, err := p.plusExpression()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIn(token.LEFT_SHIFT, token.RIGHT_SHIFT) {
+		op := p.currToken.Literal
+		_ = p.eatIn(token.LEFT_SHIFT, token.RIGHT_SHIFT)
 		right, err := p.plusExpression()
 		if err != nil {
 			return nil, err
@@ -102,8 +296,9 @@ func (p *Parser) expression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// plusExpression 解析加法类表达式
+//
 // plus_expression ::= multiplication_expression (("+" | "-") multiplication_expression)*
-// 加法类表达式
 func (p *Parser) plusExpression() (ast.Expression, error) {
 	tok := p.currToken
 	expr, err := p.multiplyExpression()
@@ -127,8 +322,9 @@ func (p *Parser) plusExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// 解析乘法类表达式
+//
 // multiply_expression ::= atom (("*" | "/" | "%") atom)*
-// 乘法类表达式
 func (p *Parser) multiplyExpression() (ast.Expression, error) {
 	tok := p.currToken
 	expr, err := p.atom()
@@ -152,8 +348,9 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// atom 解析表达式的基本单元
+//
 // atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_INT
-// 语法中的最小单元
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	switch p.currToken.Type {
@@ -221,6 +418,8 @@ func (p *Parser) eat(t token.TokenType) error {
 	if p.currTokenIs(t) {
 		p.nextToken()
 		return nil
+	} else if p.currTokenIs(token.ILLEGAL) {
+		return p.syntaxError(p.currToken.Literal)
 	} else {
 		return p.expectError(t)
 	}
@@ -243,5 +442,5 @@ func (p *Parser) expectError(expected token.TokenType) error {
 }
 
 func (p *Parser) syntaxError(msg string) error {
-	return fmt.Errorf(msg)
+	return fmt.Errorf("syntax error: %s", msg)
 }

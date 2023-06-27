@@ -64,6 +64,9 @@ const (
 	WHILE    = "while"
 	CONTINUE = "continue"
 	BREAK    = "break"
+	NOT      = "not"
+	AND      = "and"
+	OR       = "or"
 )
 
 type Position struct {
@@ -112,6 +115,9 @@ var keywords = map[string]TokenType{
 	"while":    WHILE,
 	"continue": CONTINUE,
 	"break":    BREAK,
+	"not":      NOT,
+	"and":      AND,
+	"or":       OR,
 }
 
 func LookupIdent(ident string) TokenType {
