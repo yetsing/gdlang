@@ -346,18 +346,18 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 
 // unaryExpression 解析一元表达式
 //
-// unary_expression ::= [("-" | "~")] atom
+// unary_expression ::= [("-" | "~")] primary_expression
 func (p *Parser) unaryExpression() (ast.Expression, error) {
 	tok := p.currToken
 	if !p.currTokenIn(token.MINUS, token.BITWISE_NOT) {
-		return p.atom()
+		return p.primaryExpression()
 	}
 	op := tok.Literal
 	err := p.eatIn(token.MINUS, token.BITWISE_NOT)
 	if err != nil {
 		return nil, err
 	}
-	right, err := p.atom()
+	right, err := p.primaryExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -365,6 +365,96 @@ func (p *Parser) unaryExpression() (ast.Expression, error) {
 		Token:    tok,
 		Operator: op,
 		Right:    right,
+	}
+	return expr, nil
+}
+
+// primaryExpression 解析索引访问、属性访问、函数调用表达式
+//
+// primary_expression ::= atom ( subscription | attribute | call)*
+// subscription       ::= "[" expression "]"
+// attribute          ::= "." IDENT
+// call               ::= "(" [argument_list] ")"
+// argument_list      ::= expression ("," expression)* [","]
+func (p *Parser) primaryExpression() (ast.Expression, error) {
+	expr, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+	for p.currTokenIn(token.LBRACKET, token.DOT, token.LPAREN) {
+		tok := p.currToken
+		switch p.currToken.Type {
+		case token.LBRACKET:
+			_ = p.eat(token.LBRACKET)
+			index, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			expr = &ast.SubscriptionExpression{
+				Token: tok,
+				Left:  expr,
+				Index: index,
+			}
+			err = p.eat(token.RBRACKET)
+			if err != nil {
+				return nil, err
+			}
+		case token.DOT:
+			_ = p.eat(token.DOT)
+			ident := &ast.Identifier{
+				Token: p.currToken,
+				Value: p.currToken.Literal,
+			}
+			err = p.eat(token.IDENT)
+			if err != nil {
+				return nil, err
+			}
+			expr = &ast.AttributeExpression{
+				Token:     tok,
+				Left:      expr,
+				Attribute: ident,
+			}
+		case token.LPAREN:
+			// 这么几种情况
+			//  ()
+			//  (expr,)
+			//  (expr1,expr2)
+			//  (expr1,expr2,)
+			_ = p.eat(token.LPAREN)
+			var arguments []ast.Expression
+			var arg ast.Expression
+			if !p.currTokenIs(token.RPAREN) {
+				arg, err = p.expression()
+				if err != nil {
+					return nil, err
+				}
+				arguments = append(arguments, arg)
+			}
+			for p.currTokenIs(token.COMMA) {
+				_ = p.eat(token.COMMA)
+				// 只有一个参数，后面有个逗号
+				if p.currTokenIs(token.RPAREN) {
+					break
+				}
+				arg, err = p.expression()
+				if err != nil {
+					return nil, err
+				}
+				arguments = append(arguments, arg)
+			}
+			if p.currTokenIs(token.COMMA) {
+				_ = p.eat(token.COMMA)
+			}
+			err = p.eat(token.RPAREN)
+			if err != nil {
+				return nil, err
+			}
+			expr = &ast.CallExpression{
+				Token:     tok,
+				Function:  expr,
+				Arguments: arguments,
+			}
+		}
 	}
 	return expr, nil
 }

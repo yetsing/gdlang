@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 	"weilang/token"
 )
 
@@ -98,6 +99,70 @@ func (be *BinaryOpExpression) String() string {
 	out.WriteString(be.Left.String())
 	out.WriteString(" " + be.Operator + " ")
 	out.WriteString(be.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
+type SubscriptionExpression struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
+}
+
+func (se *SubscriptionExpression) expressionNode()      {}
+func (se *SubscriptionExpression) TokenLiteral() string { return se.Token.Literal }
+func (se *SubscriptionExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(se.Left.String())
+	out.WriteString("[")
+	out.WriteString(se.Index.String())
+	out.WriteString("])")
+
+	return out.String()
+}
+
+type AttributeExpression struct {
+	Token     token.Token
+	Left      Expression
+	Attribute *Identifier
+}
+
+func (ae *AttributeExpression) expressionNode()      {}
+func (ae *AttributeExpression) TokenLiteral() string { return ae.Token.Literal }
+func (ae *AttributeExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(ae.Left.String())
+	out.WriteString(".")
+	out.WriteString(ae.Attribute.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
+type CallExpression struct {
+	Token     token.Token
+	Function  Expression
+	Arguments []Expression
+}
+
+func (ce *CallExpression) expressionNode()      {}
+func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
+func (ce *CallExpression) String() string {
+	var out bytes.Buffer
+
+	var args []string
+	for _, a := range ce.Arguments {
+		args = append(args, a.String())
+	}
+
+	out.WriteString(ce.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ", "))
 	out.WriteString(")")
 
 	return out.String()
