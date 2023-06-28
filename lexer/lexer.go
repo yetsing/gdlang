@@ -53,7 +53,10 @@ func (l *Lexer) NextToken() token.Token {
 			l.readChar()
 			ttype = token.NOT_EQ
 		} else {
-			ttype = token.BANG
+			l.readChar()
+			tok := l.buildToken(token.ILLEGAL)
+			tok.Literal = "invalid char !"
+			return tok
 		}
 	case '/':
 		if l.peekCharIs('/') {

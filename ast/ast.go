@@ -61,6 +61,26 @@ type Expression interface {
 
 // Expression 下面的是表达式节点
 
+// UnaryExpression 一元操作表达式
+type UnaryExpression struct {
+	Token    token.Token // The prefix token, e.g. !
+	Operator string
+	Right    Expression
+}
+
+func (pe *UnaryExpression) expressionNode()      {}
+func (pe *UnaryExpression) TokenLiteral() string { return pe.Token.Literal }
+func (pe *UnaryExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(pe.Operator)
+	out.WriteString(pe.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
 // BinaryOpExpression 二元操作表达式，如 "1 + 2"
 type BinaryOpExpression struct {
 	Token    token.Token

@@ -138,26 +138,22 @@ func (p *Parser) andExpression() (ast.Expression, error) {
 
 // notExpression 解析 not 逻辑表达式
 //
-// not_expression ::= comparison_expression ("not" comparison_expression)*
+// not_expression ::= ["not"] comparison_expression
 func (p *Parser) notExpression() (ast.Expression, error) {
+	if !p.currTokenIs(token.NOT) {
+		return p.comparisonExpression()
+	}
 	tok := p.currToken
-	expr, err := p.comparisonExpression()
+	op := p.currToken.Literal
+	_ = p.eat(token.NOT)
+	right, err := p.comparisonExpression()
 	if err != nil {
 		return nil, err
 	}
-	for p.currTokenIs(token.NOT) {
-		op := p.currToken.Literal
-		_ = p.eat(token.NOT)
-		right, err := p.comparisonExpression()
-		if err != nil {
-			return nil, err
-		}
-		expr = &ast.BinaryOpExpression{
-			Token:    tok,
-			Left:     expr,
-			Operator: op,
-			Right:    right,
-		}
+	expr := &ast.UnaryExpression{
+		Token:    tok,
+		Operator: op,
+		Right:    right,
 	}
 	return expr, nil
 }
@@ -322,19 +318,19 @@ func (p *Parser) plusExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
-// 解析乘法类表达式
+// multiplyExpression 解析乘法类表达式
 //
-// multiply_expression ::= atom (("*" | "/" | "%") atom)*
+// multiply_expression ::= unary_expression (("*" | "/" | "%") unary_expression)*
 func (p *Parser) multiplyExpression() (ast.Expression, error) {
 	tok := p.currToken
-	expr, err := p.atom()
+	expr, err := p.unaryExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIn(token.ASTERISK, token.SLASH, token.MODULO) {
 		op := p.currToken.Literal
 		_ = p.eatIn(token.ASTERISK, token.SLASH, token.MODULO)
-		right, err := p.atom()
+		right, err := p.unaryExpression()
 		if err != nil {
 			return nil, err
 		}
@@ -348,11 +344,37 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 	return expr, nil
 }
 
+// unaryExpression 解析一元表达式
+//
+// unary_expression ::= [("-" | "~")] atom
+func (p *Parser) unaryExpression() (ast.Expression, error) {
+	tok := p.currToken
+	if !p.currTokenIn(token.MINUS, token.BITWISE_NOT) {
+		return p.atom()
+	}
+	op := tok.Literal
+	err := p.eatIn(token.MINUS, token.BITWISE_NOT)
+	if err != nil {
+		return nil, err
+	}
+	right, err := p.atom()
+	if err != nil {
+		return nil, err
+	}
+	expr := &ast.UnaryExpression{
+		Token:    tok,
+		Operator: op,
+		Right:    right,
+	}
+	return expr, nil
+}
+
 // atom 解析表达式的基本单元
 //
-// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_INT
+// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_INT | "(" expression ")"
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
+	var err error
 	switch p.currToken.Type {
 	case token.IDENT:
 		expr = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
@@ -378,9 +400,9 @@ func (p *Parser) atom() (ast.Expression, error) {
 		default:
 			start = 0
 		}
-		n, err := strconv.ParseInt(literal[start:], base, bitSize)
+		n, err = strconv.ParseInt(literal[start:], base, bitSize)
 		if err != nil {
-			return nil, err
+			return nil, p.syntaxError(err.Error())
 		}
 		expr = &ast.IntegerLiteral{
 			Token: p.currToken,
@@ -399,6 +421,18 @@ func (p *Parser) atom() (ast.Expression, error) {
 			Value: p.currToken.Literal == "true",
 		}
 		_ = p.eatIn(token.TRUE, token.FALSE)
+	case token.LPAREN:
+		_ = p.eat(token.LPAREN)
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		err = p.eat(token.RPAREN)
+		if err != nil {
+			return nil, err
+		}
+	case token.ILLEGAL:
+		return nil, p.syntaxError(p.currToken.Literal)
 	default:
 		return nil, p.syntaxError("invalid syntax")
 	}
@@ -409,6 +443,8 @@ func (p *Parser) eatIn(ts ...token.TokenType) error {
 	if p.currTokenIn(ts...) {
 		p.nextToken()
 		return nil
+	} else if p.currTokenIs(token.ILLEGAL) {
+		return p.syntaxError(p.currToken.Literal)
 	} else {
 		return p.expectError(ts[0])
 	}
@@ -438,9 +474,10 @@ func (p *Parser) currTokenIs(t token.TokenType) bool {
 }
 
 func (p *Parser) expectError(expected token.TokenType) error {
-	return fmt.Errorf("expected %s, but got %s", expected, p.currToken.Type)
+	msg := fmt.Sprintf("expected %s, but got %s", expected, p.currToken.Type)
+	return p.syntaxError(msg)
 }
 
 func (p *Parser) syntaxError(msg string) error {
-	return fmt.Errorf("syntax error: %s", msg)
+	return fmt.Errorf("SyntaxError: %s", msg)
 }
