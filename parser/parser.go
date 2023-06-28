@@ -461,7 +461,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 
 // atom 解析表达式的基本单元
 //
-// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_INT | "(" expression ")"
+// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | list_literal | "(" expression ")"
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	var err error
@@ -521,10 +521,124 @@ func (p *Parser) atom() (ast.Expression, error) {
 		if err != nil {
 			return nil, err
 		}
+	case token.LBRACKET:
+		return p.listLiteral()
+	case token.LBRACE:
+		return p.dictLiteral()
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
 		return nil, p.syntaxError("invalid syntax")
+	}
+	return expr, nil
+}
+
+// listLiteral 解析列表字面量
+//
+// list_literal ::= "[" [expression] ("," expression)* [","] "]"
+func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
+	tok := p.currToken
+	err := p.eat(token.LBRACKET)
+	if err != nil {
+		return nil, err
+	}
+	var elements []ast.Expression
+	var ele ast.Expression
+	// 有下面几种情况
+	//  []
+	//  [expr]
+	//  [expr,]
+	//  [expr1,expr2]
+	if !p.currTokenIs(token.RBRACKET) {
+		ele, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, ele)
+	}
+	for p.currTokenIs(token.COMMA) {
+		_ = p.eat(token.COMMA)
+		if p.currTokenIs(token.RBRACKET) {
+			break
+		}
+		ele, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, ele)
+	}
+	if p.currTokenIs(token.COMMA) {
+		_ = p.eat(token.COMMA)
+	}
+	err = p.eat(token.RBRACKET)
+	if err != nil {
+		return nil, err
+	}
+	expr := &ast.ListLiteral{
+		Token:    tok,
+		Elements: elements,
+	}
+	return expr, nil
+}
+
+// dictLiteral 解析字典字面量
+//
+// dict_literal ::= "{" [ pairs ] "}"
+// pairs        ::= [pair ("," pair)* [","]
+// pair         ::= expression ":" expression
+func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
+	tok := p.currToken
+	err := p.eat(token.LBRACE)
+	if err != nil {
+		return nil, err
+	}
+	var key ast.Expression
+	var val ast.Expression
+	pairs := make(map[ast.Expression]ast.Expression)
+	if !p.currTokenIs(token.RBRACE) {
+		key, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		err = p.eat(token.COLON)
+		if err != nil {
+			return nil, err
+		}
+		val, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		pairs[key] = val
+	}
+	for p.currTokenIs(token.COMMA) {
+		_ = p.eat(token.COMMA)
+		if p.currTokenIs(token.RBRACE) {
+			break
+		}
+		key, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		err = p.eat(token.COLON)
+		if err != nil {
+			return nil, err
+		}
+		val, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		pairs[key] = val
+	}
+	if p.currTokenIs(token.COMMA) {
+		_ = p.eat(token.COMMA)
+	}
+	err = p.eat(token.RBRACE)
+	if err != nil {
+		return nil, err
+	}
+	expr := &ast.DictLiteral{
+		Token: tok,
+		Pairs: pairs,
 	}
 	return expr, nil
 }
