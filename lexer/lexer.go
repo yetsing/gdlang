@@ -3,14 +3,18 @@ package lexer
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 	"weilang/token"
 )
 
 type Lexer struct {
-	input string
+	// Filename 文件名
+	Filename string
+	input    string
 	// current index of ch in ucodes
 	index int
 	// current char
@@ -23,10 +27,26 @@ type Lexer struct {
 	markPosition token.Position
 }
 
+func stringFromFilename(filename string) string {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Printf(`read file "%s" error: %v\n`, filename, err)
+		os.Exit(1)
+	}
+	return string(data)
+}
+
 func New(input string) *Lexer {
 	l := &Lexer{input: input, index: -1}
 	l.init()
 	l.readChar()
+	return l
+}
+
+func NewWithFilename(filename string) *Lexer {
+	input := stringFromFilename(filename)
+	l := New(input)
+	l.Filename = filename
 	return l
 }
 
@@ -143,10 +163,15 @@ func (l *Lexer) NextToken() token.Token {
 	return l.buildToken(ttype)
 }
 
+func (l *Lexer) GetLines() []string {
+	return strings.Split(l.input, "\n")
+}
+
 func (l *Lexer) init() {
 	l.ucodes = []rune(l.input)
 	l.position.Line = 0
 	l.position.Column = -1
+	l.Filename = "<input>"
 }
 
 func (l *Lexer) skipWhitespace() {

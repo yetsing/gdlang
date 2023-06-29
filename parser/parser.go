@@ -3,20 +3,24 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"weilang/ast"
 	"weilang/lexer"
 	"weilang/token"
 )
 
 type Parser struct {
-	l *lexer.Lexer
-
+	l         *lexer.Lexer
 	currToken token.Token
+	filename  string
+	lines     []string
 }
 
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l: l,
+		l:        l,
+		filename: l.Filename,
+		lines:    l.GetLines(),
 	}
 	p.nextToken()
 	return p
@@ -54,8 +58,52 @@ func (p *Parser) program() (*ast.Program, error) {
 	return program, nil
 }
 
-// statement ::= expr [";"]
+// statement ::= var_statement | expression_statement
 func (p *Parser) statement() (ast.Statement, error) {
+	switch p.currToken.Type {
+	case token.VAR:
+		return p.varStatement()
+	default:
+		return p.expressionStatement()
+	}
+}
+
+// var_statement ::= "var" IDENT "=" expression [";"]
+func (p *Parser) varStatement() (*ast.VarStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.VAR)
+	if err != nil {
+		return nil, err
+	}
+	name := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.ASSIGN)
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if p.currTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	varStmt := &ast.VarStatement{
+		Token: tok,
+		Name:  name,
+		Value: expr,
+	}
+	return varStmt, nil
+}
+
+// expression_statement ::= expr [";"]
+func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	stmt := &ast.ExpressionStatement{Token: p.currToken}
 	expr, err := p.expression()
 	if err != nil {
@@ -683,5 +731,20 @@ func (p *Parser) expectError(expected token.TokenType) error {
 }
 
 func (p *Parser) syntaxError(msg string) error {
-	return fmt.Errorf("SyntaxError: %s", msg)
+	// 标注错误的位置
+	template := `
+File "%s", line %d
+  %s
+  %s
+SyntaxError: %s`
+	line := p.currToken.Start.Line
+	column := p.currToken.Start.Column
+	return fmt.Errorf(template, p.filename, line+1, p.lines[line], strRjust("^", column), msg)
+}
+
+func strRjust(s string, n int) string {
+	if len(s) >= n {
+		return s
+	}
+	return strings.Repeat(" ", n-len(s)) + s
 }

@@ -7,6 +7,42 @@ import (
 	"weilang/lexer"
 )
 
+func TestVarStatements(t *testing.T) {
+	tests := []struct {
+		input              string
+		expectedIdentifier string
+		expectedValue      interface{}
+	}{
+		{"var x = 5;", "x", 5},
+		{"var y = true;", "y", true},
+		{"var foobar = y;", "foobar", "y"},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt := program.Statements[0]
+		if !testVarStatement(t, stmt, tt.expectedIdentifier) {
+			return
+		}
+
+		val := stmt.(*ast.VarStatement).Value
+		if !testLiteralExpression(t, val, tt.expectedValue) {
+			return
+		}
+	}
+}
+
 func TestParsingBinaryOpExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
@@ -716,6 +752,32 @@ func TestCallExpressionParameterParsing(t *testing.T) {
 			}
 		}
 	}
+}
+
+func testVarStatement(t *testing.T, s ast.Statement, name string) bool {
+	if s.TokenLiteral() != "var" {
+		t.Errorf("s.TokenLiteral not 'var'. got=%q", s.TokenLiteral())
+		return false
+	}
+
+	varStmt, ok := s.(*ast.VarStatement)
+	if !ok {
+		t.Errorf("s not *ast.VarStatement. got=%T", s)
+		return false
+	}
+
+	if varStmt.Name.Value != name {
+		t.Errorf("varStmt.Name.Value not '%s'. got=%s", name, varStmt.Name.Value)
+		return false
+	}
+
+	if varStmt.Name.TokenLiteral() != name {
+		t.Errorf("varStmt.Name.TokenLiteral() not '%s'. got=%s",
+			name, varStmt.Name.TokenLiteral())
+		return false
+	}
+
+	return true
 }
 
 func testBinaryOpExpression(
