@@ -62,6 +62,49 @@ func (vs *VarStatement) String() string {
 	return out.String()
 }
 
+type ConStatement struct {
+	Token token.Token
+	Name  *Identifier
+	Value Expression
+}
+
+func (cs *ConStatement) statementNode()       {}
+func (cs *ConStatement) TokenLiteral() string { return cs.Token.Literal }
+func (cs *ConStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(cs.TokenLiteral() + " ")
+	out.WriteString(cs.Name.String())
+	out.WriteString(" = ")
+
+	out.WriteString(cs.Value.String())
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+type AssignStatement struct {
+	Token token.Token
+	Name  *Identifier
+	Value Expression
+}
+
+func (as *AssignStatement) statementNode()       {}
+func (as *AssignStatement) TokenLiteral() string { return as.Token.Literal }
+func (as *AssignStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(as.Name.String())
+	out.WriteString(" = ")
+
+	out.WriteString(as.Value.String())
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
 type ReturnStatement struct {
 	Token       token.Token // the 'return' token
 	ReturnValue Expression
@@ -95,6 +138,23 @@ func (es *ExpressionStatement) String() string {
 		return es.Expression.String()
 	}
 	return ""
+}
+
+type BlockStatement struct {
+	Token      token.Token // the { token
+	Statements []Statement
+}
+
+func (bs *BlockStatement) statementNode()       {}
+func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
+func (bs *BlockStatement) String() string {
+	var out bytes.Buffer
+
+	for _, s := range bs.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
 }
 
 // All expression nodes implement this

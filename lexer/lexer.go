@@ -43,6 +43,7 @@ func New(input string) *Lexer {
 	return l
 }
 
+//goland:noinspection ALL
 func NewWithFilename(filename string) *Lexer {
 	input := stringFromFilename(filename)
 	l := New(input)
@@ -57,6 +58,8 @@ func (l *Lexer) NextToken() token.Token {
 	l.mark()
 
 	switch l.ch {
+	case '\n':
+		ttype = token.NEWLINE
 	case '=':
 		if l.peekCharIs('=') {
 			l.readChar()
@@ -175,7 +178,7 @@ func (l *Lexer) init() {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
 		l.readChar()
 	}
 }
@@ -236,7 +239,12 @@ func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
 		endIndex--
 	case token.EOF:
 		// 确保 EOF token 的 Literal 为空字符串
-		endIndex = startIndex
+		return token.Token{
+			Type:    token.EOF,
+			Literal: "",
+			Start:   start,
+			End:     end,
+		}
 	}
 	tok := token.Token{Type: ttype, Literal: string(l.ucodes[startIndex:endIndex]), Start: start, End: end}
 	return tok

@@ -17,7 +17,6 @@ const (
 	ASSIGN   = "="
 	PLUS     = "+"
 	MINUS    = "-"
-	BANG     = "!"
 	ASTERISK = "*"
 	SLASH    = "/"
 	MODULO   = "%"
@@ -67,6 +66,9 @@ const (
 	NOT      = "not"
 	AND      = "and"
 	OR       = "or"
+
+	// NEWLINE 换行 token 用来保证一行一条语句
+	NEWLINE = "newline"
 )
 
 type Position struct {

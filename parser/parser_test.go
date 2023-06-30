@@ -43,6 +43,116 @@ func TestVarStatements(t *testing.T) {
 	}
 }
 
+func TestConStatements(t *testing.T) {
+	tests := []struct {
+		input              string
+		expectedIdentifier string
+		expectedValue      interface{}
+	}{
+		{"con x = 5;", "x", 5},
+		{"con y = true;", "y", true},
+		{"con foobar = y;", "foobar", "y"},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt := program.Statements[0]
+		if !testConStatement(t, stmt, tt.expectedIdentifier) {
+			return
+		}
+
+		val := stmt.(*ast.ConStatement).Value
+		if !testLiteralExpression(t, val, tt.expectedValue) {
+			return
+		}
+	}
+}
+
+func TestAssignStatements(t *testing.T) {
+	tests := []struct {
+		input              string
+		expectedIdentifier string
+		expectedValue      interface{}
+	}{
+		{"x = 5;", "x", 5},
+		{"y = true;", "y", true},
+		{"foobar = y;", "foobar", "y"},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt := program.Statements[0]
+		if !testAssignStatement(t, stmt, tt.expectedIdentifier) {
+			return
+		}
+
+		val := stmt.(*ast.AssignStatement).Value
+		if !testLiteralExpression(t, val, tt.expectedValue) {
+			return
+		}
+	}
+}
+
+func TestReturnStatements(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedValue interface{}
+	}{
+		{"return 5;", 5},
+		{"return true;", true},
+		{"return foobar;", "foobar"},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt := program.Statements[0]
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Fatalf("stmt not *ast.ReturnStatement. got=%T", stmt)
+		}
+		if returnStmt.TokenLiteral() != "return" {
+			t.Fatalf("returnStmt.TokenLiteral not 'return', got %q",
+				returnStmt.TokenLiteral())
+		}
+		if testLiteralExpression(t, returnStmt.ReturnValue, tt.expectedValue) {
+			return
+		}
+	}
+}
+
 func TestParsingBinaryOpExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
@@ -774,6 +884,58 @@ func testVarStatement(t *testing.T, s ast.Statement, name string) bool {
 	if varStmt.Name.TokenLiteral() != name {
 		t.Errorf("varStmt.Name.TokenLiteral() not '%s'. got=%s",
 			name, varStmt.Name.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func testConStatement(t *testing.T, s ast.Statement, name string) bool {
+	if s.TokenLiteral() != "con" {
+		t.Errorf("s.TokenLiteral not 'var'. got=%q", s.TokenLiteral())
+		return false
+	}
+
+	stmt, ok := s.(*ast.ConStatement)
+	if !ok {
+		t.Errorf("s not *ast.ConStatement. got=%T", s)
+		return false
+	}
+
+	if stmt.Name.Value != name {
+		t.Errorf("stmt.Name.Value not '%s'. got=%s", name, stmt.Name.Value)
+		return false
+	}
+
+	if stmt.Name.TokenLiteral() != name {
+		t.Errorf("stmt.Name.TokenLiteral() not '%s'. got=%s",
+			name, stmt.Name.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func testAssignStatement(t *testing.T, s ast.Statement, name string) bool {
+	if s.TokenLiteral() != name {
+		t.Errorf("s.TokenLiteral not '%s'. got=%q", name, s.TokenLiteral())
+		return false
+	}
+
+	stmt, ok := s.(*ast.AssignStatement)
+	if !ok {
+		t.Errorf("s not *ast.AssignStatement. got=%T", s)
+		return false
+	}
+
+	if stmt.Name.Value != name {
+		t.Errorf("stmt.Name.Value not '%s'. got=%s", name, stmt.Name.Value)
+		return false
+	}
+
+	if stmt.Name.TokenLiteral() != name {
+		t.Errorf("stmt.Name.TokenLiteral() not '%s'. got=%s",
+			name, stmt.Name.TokenLiteral())
 		return false
 	}
 

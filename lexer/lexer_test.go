@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"testing"
 
 	"weilang/token"
@@ -16,7 +17,7 @@ con add = fn(x, y) {
 };
 
 var result = add(five, ten);
-!-/*5;
+ -/*5;
 5 < 10 > 5;
 5 <= 10 >= 5;
 
@@ -63,6 +64,10 @@ not and or
 		expectedEnd     token.Position
 	}{
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			token.VAR, "var",
 			token.Position{Line: 1},
 			token.Position{Line: 1, Column: 3},
@@ -88,6 +93,10 @@ not and or
 			token.Position{Line: 1, Column: 13},
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			token.CON, "con",
 			token.Position{Line: 2},
 			token.Position{Line: 2, Column: 3},
@@ -111,6 +120,14 @@ not and or
 			token.SEMICOLON, ";",
 			token.Position{Line: 2, Column: 12},
 			token.Position{Line: 2, Column: 13},
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			token.CON, "con",
@@ -163,6 +180,10 @@ not and or
 			token.Position{Line: 4, Column: 20},
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			token.IDENT, "x",
 			token.Position{Line: 5, Column: 2},
 			token.Position{Line: 5, Column: 3},
@@ -183,6 +204,10 @@ not and or
 			token.Position{Line: 5, Column: 8},
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			token.RBRACE, "}",
 			token.Position{Line: 6},
 			token.Position{Line: 6, Column: 1},
@@ -191,6 +216,14 @@ not and or
 			token.SEMICOLON, ";",
 			token.Position{Line: 6, Column: 1},
 			token.Position{Line: 6, Column: 2},
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{expectedType: token.VAR, expectedLiteral: "var"},
 		{expectedType: token.IDENT, expectedLiteral: "result"},
@@ -202,24 +235,43 @@ not and or
 		{expectedType: token.IDENT, expectedLiteral: "ten"},
 		{expectedType: token.RPAREN, expectedLiteral: ")"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{expectedType: token.BANG, expectedLiteral: "!"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.MINUS, expectedLiteral: "-"},
 		{expectedType: token.SLASH, expectedLiteral: "/"},
 		{expectedType: token.ASTERISK, expectedLiteral: "*"},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.LESS_THAN, expectedLiteral: "<"},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.GREAT_THAN, expectedLiteral: ">"},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.LESS_EQUAL_THAN, expectedLiteral: "<="},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.GREAT_EQUAL_THAN, expectedLiteral: ">="},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.IF, expectedLiteral: "if"},
 		{expectedType: token.LPAREN, expectedLiteral: "("},
 		{expectedType: token.INT, expectedLiteral: "5"},
@@ -227,40 +279,92 @@ not and or
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.RPAREN, expectedLiteral: ")"},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.RETURN, expectedLiteral: "return"},
 		{expectedType: token.TRUE, expectedLiteral: "true"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
 		{expectedType: token.ELSE, expectedLiteral: "else"},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.RETURN, expectedLiteral: "return"},
 		{expectedType: token.FALSE, expectedLiteral: "false"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.EQ, expectedLiteral: "=="},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.NOT_EQ, expectedLiteral: "!="},
 		{expectedType: token.INT, expectedLiteral: "9"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.STRING, expectedLiteral: "foobar"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.STRING, expectedLiteral: "foo bar"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.LBRACKET, expectedLiteral: "["},
 		{expectedType: token.INT, expectedLiteral: "1"},
 		{expectedType: token.COMMA, expectedLiteral: ","},
 		{expectedType: token.INT, expectedLiteral: "2"},
 		{expectedType: token.RBRACKET, expectedLiteral: "]"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
 		{expectedType: token.STRING, expectedLiteral: "foo"},
 		{expectedType: token.COLON, expectedLiteral: ":"},
 		{expectedType: token.STRING, expectedLiteral: "bar"},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.IDENT, expectedLiteral: "a"},
 		{expectedType: token.DOT, expectedLiteral: "."},
 		{expectedType: token.IDENT, expectedLiteral: "foo"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.INT, expectedLiteral: "1"},
 		{
 			expectedType: token.MODULO, expectedLiteral: "%",
@@ -273,15 +377,31 @@ not and or
 			expectedEnd:   token.Position{Line: 26, Column: 5},
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType: token.COMMENT, expectedLiteral: " 这是一段注释",
 			expectedStart: token.Position{Line: 27, Column: 2},
 			expectedEnd:   token.Position{Line: 27, Column: 9},
 		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{expectedType: token.STRING, expectedLiteral: "world"},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
 		{
 			expectedType: token.STRING, expectedLiteral: "hello world",
 			expectedStart: token.Position{Line: 29, Column: 0},
 			expectedEnd:   token.Position{Line: 29, Column: 13},
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType: token.VAR, expectedLiteral: "var",
@@ -304,9 +424,17 @@ not and or
 			expectedEnd:   token.Position{Line: 30, Column: 19},
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType: token.STRING, expectedLiteral: "中文字符串",
 			expectedStart: token.Position{Line: 31, Column: 0},
 			expectedEnd:   token.Position{Line: 31, Column: 7},
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType: token.STRING,
@@ -314,8 +442,16 @@ not and or
 			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000\x00\u00ff\u0000\uabcd\uFFFF",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.STRING,
 			expectedLiteral: "\u0000\uabcd\uFFFF\U00000000\U00012345",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.WHILE,
@@ -338,20 +474,40 @@ not and or
 			expectedLiteral: "{",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.IDENT,
 			expectedLiteral: "statement",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.CONTINUE,
 			expectedLiteral: "continue",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.BREAK,
 			expectedLiteral: "break",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.RBRACE,
 			expectedLiteral: "}",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.INT,
@@ -362,12 +518,20 @@ not and or
 			expectedLiteral: "0b10001111",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.INT,
 			expectedLiteral: "0o17",
 		},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "0o7777",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.INT,
@@ -386,8 +550,16 @@ not and or
 			expectedLiteral: "0xABCDEF",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.INT,
 			expectedLiteral: "1234",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.INT,
@@ -402,6 +574,10 @@ not and or
 			expectedLiteral: "2",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.INT,
 			expectedLiteral: "1",
 		},
@@ -412,6 +588,10 @@ not and or
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "2",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.INT,
@@ -438,6 +618,10 @@ not and or
 			expectedLiteral: "2",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType:    token.NOT,
 			expectedLiteral: "not",
 		},
@@ -450,6 +634,10 @@ not and or
 			expectedLiteral: "or",
 		},
 		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
 			expectedType: token.EOF,
 		},
 	}
@@ -460,8 +648,11 @@ not and or
 		tok := l.NextToken()
 
 		if !tok.TypeIs(tt.expectedType) {
-			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q",
-				i, tt.expectedType, tok.Type)
+			if tok.TypeIs(token.ILLEGAL) {
+				fmt.Printf("ILLEGAL: %s\n", tok.Literal)
+			}
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q %q, got=%q",
+				i, tt.expectedType, tt.expectedLiteral, tok.Type)
 		}
 
 		if tok.Literal != tt.expectedLiteral {

@@ -10,10 +10,12 @@ import (
 )
 
 type Parser struct {
-	l         *lexer.Lexer
-	currToken token.Token
-	filename  string
-	lines     []string
+	l            *lexer.Lexer
+	currToken    token.Token
+	peekToken    token.Token
+	filename     string
+	lines        []string
+	foundNewline bool
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -22,6 +24,8 @@ func New(l *lexer.Lexer) *Parser {
 		filename: l.Filename,
 		lines:    l.GetLines(),
 	}
+	// 填充 currToken 和 peekToken
+	p.nextToken()
 	p.nextToken()
 	return p
 }
@@ -32,17 +36,10 @@ func New(l *lexer.Lexer) *Parser {
 */
 
 func (p *Parser) ParseProgram() (*ast.Program, error) {
-	node, err := p.program()
-	if err != nil {
-		return nil, err
-	}
-	if !p.currTokenIs(token.EOF) {
-		return nil, p.expectError(token.EOF)
-	}
-	return node, nil
+	return p.program()
 }
 
-// program ::= (statement)*
+// program ::= block_statement EOF
 func (p *Parser) program() (*ast.Program, error) {
 	program := &ast.Program{}
 	program.Statements = []ast.Statement{}
@@ -55,20 +52,62 @@ func (p *Parser) program() (*ast.Program, error) {
 		program.Statements = append(program.Statements, stmt)
 	}
 
+	err := p.eat(token.EOF)
+	if err != nil {
+		return nil, err
+	}
+
 	return program, nil
 }
 
-// statement ::= var_statement | expression_statement
+// block_statement ::= (statement)*
+func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
+	block := &ast.BlockStatement{}
+
+	for !p.currTokenIs(token.EOF) {
+		stmt, err := p.statement()
+		if err != nil {
+			return nil, err
+		}
+		block.Statements = append(block.Statements, stmt)
+	}
+
+	return block, nil
+}
+
+func (p *Parser) isStatementEnd() bool {
+	switch p.currToken.Type {
+	case token.SEMICOLON:
+		p.nextToken()
+		return true
+	case token.EOF:
+		return true
+	default:
+		return p.foundNewline
+	}
+}
+
+// statement ::= var_statement | con_statement | expression_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	switch p.currToken.Type {
 	case token.VAR:
 		return p.varStatement()
+	case token.CON:
+		return p.conStatement()
+	case token.RETURN:
+		return p.returnStatement()
+	case token.IDENT:
+		if p.peekTokenIs(token.ASSIGN) {
+			return p.assignStatement()
+		} else {
+			return p.expressionStatement()
+		}
 	default:
 		return p.expressionStatement()
 	}
 }
 
-// var_statement ::= "var" IDENT "=" expression [";"]
+// var_statement ::= "var" IDENT "=" expression (";" | NEWLINE)
 func (p *Parser) varStatement() (*ast.VarStatement, error) {
 	tok := p.currToken
 	err := p.eat(token.VAR)
@@ -91,8 +130,8 @@ func (p *Parser) varStatement() (*ast.VarStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.currTokenIs(token.SEMICOLON) {
-		p.nextToken()
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
 	}
 	varStmt := &ast.VarStatement{
 		Token: tok,
@@ -102,7 +141,95 @@ func (p *Parser) varStatement() (*ast.VarStatement, error) {
 	return varStmt, nil
 }
 
-// expression_statement ::= expr [";"]
+// con_statement ::= "con" IDENT "=" expression (";" | NEWLINE)
+func (p *Parser) conStatement() (*ast.ConStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.CON)
+	if err != nil {
+		return nil, err
+	}
+	name := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.ASSIGN)
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.ConStatement{
+		Token: tok,
+		Name:  name,
+		Value: expr,
+	}
+	return stmt, nil
+}
+
+// return_statement ::= "return" ( expression ) (";" | NEWLINE)
+func (p *Parser) returnStatement() (*ast.ReturnStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.RETURN)
+	if err != nil {
+		return nil, err
+	}
+	var expr ast.Expression
+	if !p.isStatementEnd() {
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.ReturnStatement{
+		Token:       tok,
+		ReturnValue: expr,
+	}
+	return stmt, nil
+}
+
+// assign_statement ::= IDENT "=" expression (";" | NEWLINE)
+func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
+	tok := p.currToken
+	name := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err := p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.ASSIGN)
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.AssignStatement{
+		Token: tok,
+		Name:  name,
+		Value: expr,
+	}
+	return stmt, nil
+}
+
+// expression_statement ::= expr (";" | NEWLINE)
 func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	stmt := &ast.ExpressionStatement{Token: p.currToken}
 	expr, err := p.expression()
@@ -110,8 +237,8 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 		return nil, err
 	}
 	stmt.Expression = expr
-	if p.currTokenIs(token.SEMICOLON) {
-		_ = p.eat(token.SEMICOLON)
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
 	}
 	return stmt, nil
 }
@@ -714,7 +841,14 @@ func (p *Parser) eat(t token.TokenType) error {
 }
 
 func (p *Parser) nextToken() {
-	p.currToken = p.l.NextToken()
+	p.foundNewline = false
+	p.currToken = p.peekToken
+	p.peekToken = p.l.NextToken()
+	for p.currTokenIs(token.NEWLINE) {
+		p.foundNewline = true
+		p.currToken = p.peekToken
+		p.peekToken = p.l.NextToken()
+	}
 }
 
 func (p *Parser) currTokenIn(ts ...token.TokenType) bool {
@@ -723,6 +857,10 @@ func (p *Parser) currTokenIn(ts ...token.TokenType) bool {
 
 func (p *Parser) currTokenIs(t token.TokenType) bool {
 	return p.currToken.TypeIs(t)
+}
+
+func (p *Parser) peekTokenIs(t token.TokenType) bool {
+	return p.peekToken.TypeIs(t)
 }
 
 func (p *Parser) expectError(expected token.TokenType) error {
