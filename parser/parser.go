@@ -39,7 +39,7 @@ func (p *Parser) ParseProgram() (*ast.Program, error) {
 	return p.program()
 }
 
-// program ::= block_statement EOF
+// program ::= (statement)* EOF
 func (p *Parser) program() (*ast.Program, error) {
 	program := &ast.Program{}
 	program.Statements = []ast.Statement{}
@@ -64,7 +64,7 @@ func (p *Parser) program() (*ast.Program, error) {
 func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 	block := &ast.BlockStatement{}
 
-	for !p.currTokenIs(token.EOF) {
+	for !p.currTokenIn(token.RBRACE, token.EOF) {
 		stmt, err := p.statement()
 		if err != nil {
 			return nil, err
@@ -80,7 +80,7 @@ func (p *Parser) isStatementEnd() bool {
 	case token.SEMICOLON:
 		p.nextToken()
 		return true
-	case token.EOF:
+	case token.RBRACE, token.EOF:
 		return true
 	default:
 		return p.foundNewline
@@ -636,7 +636,8 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 
 // atom 解析表达式的基本单元
 //
-// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | list_literal | "(" expression ")"
+// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT
+// | list_literal | dict_literal | function_literal | "(" expression ")"
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	var err error
@@ -700,6 +701,8 @@ func (p *Parser) atom() (ast.Expression, error) {
 		return p.listLiteral()
 	case token.LBRACE:
 		return p.dictLiteral()
+	case token.FUNCTION:
+		return p.functionLiteral()
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
@@ -816,6 +819,85 @@ func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 		Pairs: pairs,
 	}
 	return expr, nil
+}
+
+// functionLiteral 解析函数定义
+//
+// function_literal ::= "fn" "(" parameter_list ")" "{" block_statement "}"
+func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
+	tok := p.currToken
+	err := p.eat(token.FUNCTION)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	paramters, err := p.parameterList()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.LBRACE)
+	if err != nil {
+		return nil, err
+	}
+	block, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.RBRACE)
+	if err != nil {
+		return nil, err
+	}
+	fl := &ast.FunctionLiteral{
+		Token:      tok,
+		Parameters: paramters,
+		Body:       block,
+	}
+	return fl, nil
+}
+
+// parameter_list ::= [IDENT] ("," IDENT)* [","]
+func (p *Parser) parameterList() ([]*ast.Identifier, error) {
+	// 主要有下面这些情况
+	// ()
+	// (a)
+	// (a,)
+	// (a,b)
+	// (a,b,)
+	var parameters []*ast.Identifier
+	var param *ast.Identifier
+	var err error
+	if !p.currTokenIs(token.RPAREN) {
+		param = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
+		err = p.eat(token.IDENT)
+		if err != nil {
+			return nil, err
+		}
+		parameters = append(parameters, param)
+	}
+	for p.currTokenIs(token.COMMA) {
+		p.nextToken()
+		// 只有一个参数，后面有个逗号
+		if !p.currTokenIs(token.IDENT) {
+			break
+		}
+		param = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
+		err = p.eat(token.IDENT)
+		if err != nil {
+			return nil, err
+		}
+		parameters = append(parameters, param)
+	}
+	if p.currTokenIs(token.COMMA) {
+		p.nextToken()
+	}
+	return parameters, nil
 }
 
 func (p *Parser) eatIn(ts ...token.TokenType) error {
