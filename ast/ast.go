@@ -150,8 +150,55 @@ func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BlockStatement) String() string {
 	var out bytes.Buffer
 
+	out.WriteString("{\n")
 	for _, s := range bs.Statements {
 		out.WriteString(s.String())
+		out.WriteString("\n")
+	}
+	out.WriteString("}")
+
+	return out.String()
+}
+
+type IfBranch struct {
+	// Token "if" token
+	Condition Expression
+	Body      *BlockStatement
+}
+
+func (i *IfBranch) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("if")
+	out.WriteString("(")
+	out.WriteString(i.Condition.String())
+	out.WriteString(")")
+	out.WriteString(i.Body.String())
+	return out.String()
+}
+
+type IfStatement struct {
+	// Token "if" token
+	Token token.Token
+	// Cases 对应多个 "if" "else if" 等多个条件分支
+	IfBranches []*IfBranch
+	ElseBody   *BlockStatement
+}
+
+func (is *IfStatement) statementNode()       {}
+func (is *IfStatement) TokenLiteral() string { return is.Token.Literal }
+func (is *IfStatement) String() string {
+	var out bytes.Buffer
+
+	var ms []string
+	for _, ifCase := range is.IfBranches {
+		ms = append(ms, ifCase.String())
+	}
+
+	out.WriteString(strings.Join(ms, " else "))
+	if is.ElseBody != nil {
+		out.WriteString(" else ")
+		out.WriteString(is.ElseBody.String())
 	}
 
 	return out.String()
@@ -291,9 +338,7 @@ func (fl *FunctionLiteral) String() string {
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") ")
-	out.WriteString("{\n")
 	out.WriteString(fl.Body.String())
-	out.WriteString("}")
 
 	return out.String()
 }
@@ -359,6 +404,14 @@ type Boolean struct {
 func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
+
+type NullLiteral struct {
+	Token token.Token
+}
+
+func (n *NullLiteral) expressionNode()      {}
+func (n *NullLiteral) TokenLiteral() string { return n.Token.Literal }
+func (n *NullLiteral) String() string       { return n.Token.Literal }
 
 type IntegerLiteral struct {
 	Token token.Token

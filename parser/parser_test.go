@@ -153,6 +153,206 @@ func TestReturnStatements(t *testing.T) {
 	}
 }
 
+func TestIfStatements(t *testing.T) {
+	input := `if (x < y) { x }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.IfStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	if len(stmt.IfBranches) != 1 {
+		t.Fatalf("too many if branch: %d", len(stmt.IfBranches))
+	}
+
+	if stmt.ElseBody != nil {
+		t.Fatalf("else not empty: \"%s\"", stmt.ElseBody.String())
+	}
+
+	ifCase := stmt.IfBranches[0]
+	if !testBinaryOpExpression(t, ifCase.Condition, "x", "<", "y") {
+		return
+	}
+
+	if len(ifCase.Body.Statements) != 1 {
+		t.Errorf("body is not 1 statements. got=%d\n",
+			len(ifCase.Body.Statements))
+	}
+
+	consequence, ok := ifCase.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			ifCase.Body.Statements[0])
+	}
+
+	if !testIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+
+	if stmt.ElseBody != nil {
+		t.Errorf("ElseBody was not nil. got=%+v", stmt.ElseBody)
+	}
+}
+
+func TestIfStatementsWithElse(t *testing.T) {
+	input := `
+if (x < y) 
+{ x }
+else { y }
+`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.IfStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	if len(stmt.IfBranches) != 1 {
+		t.Fatalf("too many if branch: %d", len(stmt.IfBranches))
+	}
+
+	ifBranch := stmt.IfBranches[0]
+	if !testBinaryOpExpression(t, ifBranch.Condition, "x", "<", "y") {
+		return
+	}
+
+	if len(ifBranch.Body.Statements) != 1 {
+		t.Errorf("body is not 1 statements. got=%d\n",
+			len(ifBranch.Body.Statements))
+	}
+
+	consequence, ok := ifBranch.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			ifBranch.Body.Statements[0])
+	}
+
+	if !testIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+
+	elseExpr, ok := stmt.ElseBody.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			ifBranch.Body.Statements[0])
+	}
+
+	if !testIdentifier(t, elseExpr.Expression, "y") {
+		return
+	}
+}
+
+func TestIfStatementsWithMultiBranch(t *testing.T) {
+	input := `
+if (x < y){ x }
+else if (x == y) { y }
+else if (x >= y) { ddd; }
+else if (x != y) { xy }
+else { x + y }
+`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.IfStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	expecteds := []struct {
+		ops  []string
+		expr string
+	}{
+		{
+			[]string{"x", "<", "y"},
+			"x",
+		},
+		{
+			[]string{"x", "==", "y"},
+			"y",
+		},
+		{
+			[]string{"x", ">=", "y"},
+			"ddd",
+		},
+		{
+			[]string{"x", "!=", "y"},
+			"xy",
+		},
+	}
+
+	if len(stmt.IfBranches) != len(expecteds) {
+		t.Fatalf("wrong number if branch: %d", len(stmt.IfBranches))
+	}
+
+	for i, ifBranch := range stmt.IfBranches {
+		expected := expecteds[i]
+		if !testBinaryOpExpression(t, ifBranch.Condition, expected.ops[0], expected.ops[1], expected.ops[2]) {
+			return
+		}
+
+		if len(ifBranch.Body.Statements) != 1 {
+			t.Errorf("body is not 1 statements. got=%d\n",
+				len(ifBranch.Body.Statements))
+		}
+
+		consequence, ok := ifBranch.Body.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+				ifBranch.Body.Statements[0])
+		}
+
+		if !testIdentifier(t, consequence.Expression, expected.expr) {
+			return
+		}
+	}
+
+	elseStmt, ok := stmt.ElseBody.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			stmt.ElseBody.Statements[0])
+	}
+
+	if !testBinaryOpExpression(t, elseStmt.Expression, "x", "+", "y") {
+		return
+	}
+}
+
 func TestParsingBinaryOpExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
@@ -204,6 +404,8 @@ func TestParsingBinaryOpExpressions(t *testing.T) {
 
 		{"foobar and barfoo", "foobar", "and", "barfoo"},
 		{"foobar or barfoo", "foobar", "or", "barfoo"},
+
+		{"null and true", "null", "and", true},
 	}
 
 	for _, tt := range infixTests {
@@ -1028,6 +1230,9 @@ func testLiteralExpression(
 	case int64:
 		return testIntegerLiteral(t, exp, v)
 	case string:
+		if v == "null" {
+			return testNullLiteral(t, exp, v)
+		}
 		return testIdentifier(t, exp, v)
 	case bool:
 		return testBooleanLiteral(t, exp, v)
@@ -1092,6 +1297,22 @@ func testBooleanLiteral(t *testing.T, exp ast.Expression, value bool) bool {
 
 	if bo.TokenLiteral() != fmt.Sprintf("%t", value) {
 		t.Errorf("bo.TokenLiteral not %t. got=%s",
+			value, bo.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func testNullLiteral(t *testing.T, exp ast.Expression, value string) bool {
+	bo, ok := exp.(*ast.NullLiteral)
+	if !ok {
+		t.Errorf("exp not *ast.Boolean. got=%T", exp)
+		return false
+	}
+
+	if bo.TokenLiteral() != value {
+		t.Errorf("bo.TokenLiteral not %s. got=%s",
 			value, bo.TokenLiteral())
 		return false
 	}

@@ -60,16 +60,25 @@ func (p *Parser) program() (*ast.Program, error) {
 	return program, nil
 }
 
-// block_statement ::= (statement)*
+// block_statement ::= "{" (statement)* "}"
 func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
-	block := &ast.BlockStatement{}
+	tok := p.currToken
+	err := p.eat(token.LBRACE)
+	if err != nil {
+		return nil, err
+	}
+	block := &ast.BlockStatement{Token: tok}
 
-	for !p.currTokenIn(token.RBRACE, token.EOF) {
+	for !p.currTokenIs(token.RBRACE) {
 		stmt, err := p.statement()
 		if err != nil {
 			return nil, err
 		}
 		block.Statements = append(block.Statements, stmt)
+	}
+	err = p.eat(token.RBRACE)
+	if err != nil {
+		return nil, err
 	}
 
 	return block, nil
@@ -88,6 +97,7 @@ func (p *Parser) isStatementEnd() bool {
 }
 
 // statement ::= var_statement | con_statement | expression_statement
+// | if_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	switch p.currToken.Type {
 	case token.VAR:
@@ -102,6 +112,8 @@ func (p *Parser) statement() (ast.Statement, error) {
 		} else {
 			return p.expressionStatement()
 		}
+	case token.IF:
+		return p.ifStatement()
 	default:
 		return p.expressionStatement()
 	}
@@ -229,7 +241,7 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 	return stmt, nil
 }
 
-// expression_statement ::= expr (";" | NEWLINE)
+// expression_statement ::= expression (";" | NEWLINE)
 func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	stmt := &ast.ExpressionStatement{Token: p.currToken}
 	expr, err := p.expression()
@@ -241,6 +253,80 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	return stmt, nil
+}
+
+// if_statement ::= if_branch (else_if_branch)* [else_branch] (";" | NEWLINE)
+// if_branch      ::= "if" "(" expression ")" block_statement
+// else_if_branch ::= "else" if_branch
+// else_branch    ::= "else" "{" block_statement "}"
+func (p *Parser) ifStatement() (*ast.IfStatement, error) {
+	tok := p.currToken
+	var branches []*ast.IfBranch
+	var elseBody *ast.BlockStatement
+	branch, err := p.ifBranch()
+	if err != nil {
+		return nil, err
+	}
+	branches = append(branches, branch)
+
+	for p.currTokenIs(token.ELSE) {
+		p.nextToken()
+		if p.currTokenIs(token.IF) {
+			// 判断 else if 在同一行
+			if p.foundNewline {
+				return nil, p.syntaxError(`"else" and "if" must be one line`)
+			}
+			branch, err = p.ifBranch()
+			if err != nil {
+				return nil, err
+			}
+			branches = append(branches, branch)
+		} else {
+			elseBody, err = p.blockStatement()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
+	stmt := &ast.IfStatement{
+		Token:      tok,
+		IfBranches: branches,
+		ElseBody:   elseBody,
+	}
+	return stmt, nil
+}
+
+// if_branch      ::= "if" "(" expression ")" "{" block_statement "}"
+func (p *Parser) ifBranch() (*ast.IfBranch, error) {
+	err := p.eat(token.IF)
+	if err != nil {
+		return nil, err
+	}
+	if p.foundNewline {
+		return nil, p.invalidError()
+	}
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	branch := &ast.IfBranch{
+		Condition: condition,
+		Body:      body,
+	}
+	return branch, nil
 }
 
 /*
@@ -636,7 +722,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 
 // atom 解析表达式的基本单元
 //
-// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT
+// atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | NULL_LIT
 // | list_literal | dict_literal | function_literal | "(" expression ")"
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
@@ -687,6 +773,9 @@ func (p *Parser) atom() (ast.Expression, error) {
 			Value: p.currToken.Literal == "true",
 		}
 		_ = p.eatIn(token.TRUE, token.FALSE)
+	case token.NULL:
+		expr = &ast.NullLiteral{Token: p.currToken}
+		p.nextToken()
 	case token.LPAREN:
 		_ = p.eat(token.LPAREN)
 		expr, err = p.expression()
@@ -706,7 +795,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
-		return nil, p.syntaxError("invalid syntax")
+		return nil, p.invalidError()
 	}
 	return expr, nil
 }
@@ -842,15 +931,7 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = p.eat(token.LBRACE)
-	if err != nil {
-		return nil, err
-	}
 	block, err := p.blockStatement()
-	if err != nil {
-		return nil, err
-	}
-	err = p.eat(token.RBRACE)
 	if err != nil {
 		return nil, err
 	}
@@ -926,7 +1007,7 @@ func (p *Parser) nextToken() {
 	p.foundNewline = false
 	p.currToken = p.peekToken
 	p.peekToken = p.l.NextToken()
-	for p.currTokenIs(token.NEWLINE) {
+	for p.currTokenIn(token.NEWLINE, token.COMMENT) {
 		p.foundNewline = true
 		p.currToken = p.peekToken
 		p.peekToken = p.l.NextToken()
@@ -948,6 +1029,10 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 func (p *Parser) expectError(expected token.TokenType) error {
 	msg := fmt.Sprintf("expected %s, but got %s", expected, p.currToken.Type)
 	return p.syntaxError(msg)
+}
+
+func (p *Parser) invalidError() error {
+	return p.syntaxError("invalid syntax")
 }
 
 func (p *Parser) syntaxError(msg string) error {
