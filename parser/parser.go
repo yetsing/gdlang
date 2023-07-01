@@ -114,6 +114,12 @@ func (p *Parser) statement() (ast.Statement, error) {
 		}
 	case token.IF:
 		return p.ifStatement()
+	case token.WHILE:
+		return p.whileStatement()
+	case token.CONTINUE:
+		return p.continueStatement()
+	case token.BREAK:
+		return p.breakStatement()
 	default:
 		return p.expressionStatement()
 	}
@@ -222,9 +228,15 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p.foundNewline {
+		return nil, p.invalidError()
+	}
 	err = p.eat(token.ASSIGN)
 	if err != nil {
 		return nil, err
+	}
+	if p.foundNewline {
+		return nil, p.invalidError()
 	}
 	expr, err := p.expression()
 	if err != nil {
@@ -255,7 +267,7 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	return stmt, nil
 }
 
-// if_statement ::= if_branch (else_if_branch)* [else_branch] (";" | NEWLINE)
+// if_statement ::= if_branch (else_if_branch)* [else_branch]
 // if_branch      ::= "if" "(" expression ")" block_statement
 // else_if_branch ::= "else" if_branch
 // else_branch    ::= "else" "{" block_statement "}"
@@ -297,7 +309,7 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 	return stmt, nil
 }
 
-// if_branch      ::= "if" "(" expression ")" "{" block_statement "}"
+// if_branch      ::= "if" "(" expression ")" block_statement
 func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 	err := p.eat(token.IF)
 	if err != nil {
@@ -327,6 +339,68 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 		Body:      body,
 	}
 	return branch, nil
+}
+
+// while_statement ::= "while" "(" expression ")" block_statement
+func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.WHILE)
+	if err != nil {
+		return nil, err
+	}
+	if p.foundNewline {
+		return nil, p.invalidError()
+	}
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	stmt := &ast.WhileStatement{
+		Token:     tok,
+		Condition: condition,
+		Body:      body,
+	}
+	return stmt, nil
+}
+
+// continue_statement ::= "continue" (";" | NEWLINE)
+func (p *Parser) continueStatement() (*ast.ContinueStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.CONTINUE)
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.ContinueStatement{Token: tok}
+	return stmt, nil
+}
+
+// break_statement ::= "break" (";" | NEWLINE)
+func (p *Parser) breakStatement() (*ast.BreakStatement, error) {
+	tok := p.currToken
+	err := p.eat(token.BREAK)
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.BreakStatement{Token: tok}
+	return stmt, nil
 }
 
 /*
@@ -1036,6 +1110,7 @@ func (p *Parser) invalidError() error {
 }
 
 func (p *Parser) syntaxError(msg string) error {
+	fmt.Printf("SynatxError: current token: %+v\n", p.currToken)
 	// 标注错误的位置
 	template := `
 File "%s", line %d
@@ -1044,7 +1119,7 @@ File "%s", line %d
 SyntaxError: %s`
 	line := p.currToken.Start.Line
 	column := p.currToken.Start.Column
-	return fmt.Errorf(template, p.filename, line+1, p.lines[line], strRjust("^", column), msg)
+	return fmt.Errorf(template, p.filename, line+1, p.lines[line], strRjust("^", column+1), msg)
 }
 
 func strRjust(s string, n int) string {

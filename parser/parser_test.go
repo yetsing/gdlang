@@ -79,6 +79,58 @@ func TestConStatements(t *testing.T) {
 	}
 }
 
+func TestConFunctionStatements(t *testing.T) {
+	input := "con say = fn(name) { return }"
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+			len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ConStatement)
+	if !ok {
+		t.Fatalf("not ast.ConStatement. got=%T", program.Statements[0])
+	}
+
+	if !testConStatement(t, stmt, "say") {
+		return
+	}
+
+	function, ok := stmt.Value.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.FunctionLiteral. got=%T",
+			stmt.Value)
+	}
+
+	if len(function.Parameters) != 1 {
+		t.Fatalf("function literal parameters wrong. want 1, got=%d\n",
+			len(function.Parameters))
+	}
+
+	testLiteralExpression(t, function.Parameters[0], "name")
+
+	if len(function.Body.Statements) != 1 {
+		t.Fatalf("function.Body.Statements has not 1 statements. got=%d\n",
+			len(function.Body.Statements))
+	}
+
+	returnStmt, ok := function.Body.Statements[0].(*ast.ReturnStatement)
+	if !ok {
+		t.Fatalf("function body stmt is not ast.ReturnStatement. got=%T",
+			function.Body.Statements[0])
+	}
+
+	if returnStmt.ReturnValue != nil {
+		t.Fatalf("return unexpected value %s", returnStmt.ReturnValue)
+	}
+}
+
 func TestAssignStatements(t *testing.T) {
 	tests := []struct {
 		input              string
@@ -294,6 +346,10 @@ else { x + y }
 			program.Statements[0])
 	}
 
+	if stmt.TokenLiteral() != "if" {
+		t.Fatalf("expected if, but got=%s", stmt.TokenLiteral())
+	}
+
 	expecteds := []struct {
 		ops  []string
 		expr string
@@ -350,6 +406,60 @@ else { x + y }
 
 	if !testBinaryOpExpression(t, elseStmt.Expression, "x", "+", "y") {
 		return
+	}
+}
+
+func TestWhileStatements(t *testing.T) {
+	input := `while (x < y) { x; continue; break; }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.WhileStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.WhileStatement. got=%T",
+			program.Statements[0])
+	}
+
+	if stmt.TokenLiteral() != "while" {
+		t.Fatalf("expected while, but got=%s", stmt.TokenLiteral())
+	}
+
+	if !testBinaryOpExpression(t, stmt.Condition, "x", "<", "y") {
+		return
+	}
+
+	exprStmt, ok := stmt.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("not ast.ExpressionStatement. got=%T", stmt.Body.Statements[0])
+	}
+	if !testIdentifier(t, exprStmt.Expression, "x") {
+		return
+	}
+
+	continueStmt, ok := stmt.Body.Statements[1].(*ast.ContinueStatement)
+	if !ok {
+		t.Fatalf("not ast.ContinueStatement. got=%T", stmt.Body.Statements[1])
+	}
+	if continueStmt.TokenLiteral() != "continue" {
+		t.Fatalf("expected continue, but got=%q", continueStmt.TokenLiteral())
+	}
+
+	breakStmt, ok := stmt.Body.Statements[2].(*ast.BreakStatement)
+	if !ok {
+		t.Fatalf("not ast.BreakStatement. got=%T", stmt.Body.Statements[2])
+	}
+	if breakStmt.TokenLiteral() != "break" {
+		t.Fatalf("expected break, but got=%q", breakStmt.TokenLiteral())
 	}
 }
 
@@ -615,6 +725,7 @@ func TestFunctionLiteralParsing(t *testing.T) {
 	}
 
 	testBinaryOpExpression(t, bodyStmt.Expression, "x", "+", "y")
+
 }
 
 func TestParsingEmptyArrayLiterals(t *testing.T) {

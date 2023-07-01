@@ -204,6 +204,47 @@ func (is *IfStatement) String() string {
 	return out.String()
 }
 
+type WhileStatement struct {
+	// Token "while" token
+	Token     token.Token
+	Condition Expression
+	Body      *BlockStatement
+}
+
+func (ws *WhileStatement) statementNode()       {}
+func (ws *WhileStatement) TokenLiteral() string { return ws.Token.Literal }
+func (ws *WhileStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ws.Token.Literal)
+	out.WriteString("(")
+	out.WriteString(ws.Condition.String())
+	out.WriteString(")")
+	out.WriteString(ws.Body.String())
+
+	return out.String()
+}
+
+type ContinueStatement struct {
+	Token token.Token
+}
+
+func (c *ContinueStatement) statementNode()       {}
+func (c *ContinueStatement) TokenLiteral() string { return c.Token.Literal }
+func (c *ContinueStatement) String() string {
+	return "continue"
+}
+
+type BreakStatement struct {
+	Token token.Token
+}
+
+func (b *BreakStatement) statementNode()       {}
+func (b *BreakStatement) TokenLiteral() string { return b.Token.Literal }
+func (b *BreakStatement) String() string {
+	return "break"
+}
+
 // All expression nodes implement this
 type Expression interface {
 	Node
