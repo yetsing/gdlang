@@ -5,7 +5,6 @@ import "fmt"
 type ObjectType string
 
 const (
-	UNKNOWN_OBJ = "unknown"
 	INTEGER_OBJ = "int"
 	BOOLEAN_OBJ = "bool"
 	NULL_OBJ    = "null"

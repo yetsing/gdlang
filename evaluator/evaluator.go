@@ -19,6 +19,12 @@ func Eval(node ast.Node) object.Object {
 	case *ast.Program:
 		return evalStatements(node.Statements)
 
+	case *ast.BlockStatement:
+		return evalStatements(node.Statements)
+
+	case *ast.IfStatement:
+		return evalIfStatement(node)
+
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
 
@@ -55,6 +61,38 @@ func evalStatements(stmts []ast.Statement) object.Object {
 	return result
 }
 
+func evalIfStatement(is *ast.IfStatement) object.Object {
+	for _, branch := range is.IfBranches {
+		condition := Eval(branch.Condition)
+		if isTruthy(condition) {
+			return Eval(branch.Body)
+		}
+	}
+
+	if is.ElseBody != nil {
+		return Eval(is.ElseBody)
+	} else {
+		return NULL
+	}
+}
+
+func isTruthy(obj object.Object) bool {
+	switch obj {
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	case NULL:
+		return false
+	default:
+		switch obj := obj.(type) {
+		case *object.Integer:
+			return obj.Value != 0
+		}
+		return true
+	}
+}
+
 func evalUnaryExpression(operator string, right object.Object) object.Object {
 	switch operator {
 	case "not":
@@ -71,21 +109,7 @@ func evalUnaryExpression(operator string, right object.Object) object.Object {
 }
 
 func evalNotOperatorExpression(operand object.Object) object.Object {
-	switch operand {
-	case TRUE:
-		return FALSE
-	case FALSE:
-		return TRUE
-	case NULL:
-		return TRUE
-	default:
-		switch operand.(type) {
-		case *object.Integer:
-			obj := operand.(*object.Integer)
-			return nativeBoolToBooleanObject(obj.Value == 0)
-		}
-		return FALSE
-	}
+	return nativeBoolToBooleanObject(!isTruthy(operand))
 }
 
 func evalMinusUnaryOperatorExpression(right object.Object) object.Object {
