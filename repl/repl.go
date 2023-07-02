@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"weilang/lexer"
-	"weilang/token"
+	"weilang/parser"
 )
 
 const (
@@ -33,16 +33,14 @@ func Start(in io.Reader, out io.Writer) {
 		buffer.Reset()
 
 		l := lexer.New(input)
-		for {
-			tok := l.NextToken()
-			if tok.TypeIs(token.EOF) {
-				break
-			}
-			if tok.TypeIs(token.ILLEGAL) {
-				fmt.Println("illegal token", tok)
-				break
-			}
-			fmt.Println(tok)
+		p := parser.New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		for _, statement := range program.Statements {
+			fmt.Println(statement.String())
 		}
 	}
 }
