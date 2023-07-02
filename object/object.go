@@ -5,10 +5,11 @@ import "fmt"
 type ObjectType string
 
 const (
-	INTEGER_OBJ = "int"
-	BOOLEAN_OBJ = "bool"
-	NULL_OBJ    = "null"
-	ERROR_OBJ   = "error"
+	INTEGER_OBJ      = "int"
+	BOOLEAN_OBJ      = "bool"
+	NULL_OBJ         = "null"
+	ERROR_OBJ        = "error"
+	RETURN_VALUE_OBJ = "return_value"
 )
 
 type Object interface {
@@ -95,4 +96,24 @@ func (t *TypeError) TypeNotIs(objectType ObjectType) bool {
 
 func (t *TypeError) String() string {
 	return fmt.Sprintf("TypeError: %s", t.Message)
+}
+
+type ReturnValue struct {
+	Value Object
+}
+
+func (rv *ReturnValue) Type() ObjectType {
+	return RETURN_VALUE_OBJ
+}
+
+func (rv *ReturnValue) TypeIs(objectType ObjectType) bool {
+	return rv.Type() == objectType
+}
+
+func (rv *ReturnValue) TypeNotIs(objectType ObjectType) bool {
+	return rv.Type() != objectType
+}
+
+func (rv *ReturnValue) String() string {
+	return rv.Value.String()
 }
