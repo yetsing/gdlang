@@ -774,7 +774,7 @@ func TestParsingArrayLiterals(t *testing.T) {
 	testBinaryOpExpression(t, array.Elements[2], 3, "+", 3)
 }
 
-func TestParsingEmptyHashLiteral(t *testing.T) {
+func TestParsingEmptyDictLiteral(t *testing.T) {
 	input := "{}"
 
 	l := lexer.New(input)
@@ -795,45 +795,100 @@ func TestParsingEmptyHashLiteral(t *testing.T) {
 	}
 }
 
-func TestParsingHashLiteralsStringKeys(t *testing.T) {
-	input := `{"one": 1, "two": 2, "three": 3}`
-
-	l := lexer.New(input)
-	p := New(l)
-	program, err := p.ParseProgram()
-	if err != nil {
-		t.Fatalf("%v", err)
+func TestParsingDictLiteralsStringKeys(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected map[string]int64
+	}{
+		{
+			`{}`,
+			map[string]int64{},
+		},
+		{
+			`{"one": 1}`,
+			map[string]int64{
+				"one": 1,
+			},
+		},
+		{
+			`{"one": 1,}`,
+			map[string]int64{
+				"one": 1,
+			},
+		},
+		{
+			`{"one": 1, "two":2}`,
+			map[string]int64{
+				"one": 1,
+				"two": 2,
+			},
+		},
+		{
+			`{"one": 1, "two":2,}`,
+			map[string]int64{
+				"one": 1,
+				"two": 2,
+			},
+		},
+		{
+			`{
+					"one": 1, 
+					"two":2, 
+					"three": 3
+					}`,
+			map[string]int64{
+				"one":   1,
+				"two":   2,
+				"three": 3,
+			},
+		},
+		{
+			`{
+					"one": 1, 
+					"two":2, 
+					"three": 3,
+					}`,
+			map[string]int64{
+				"one":   1,
+				"two":   2,
+				"three": 3,
+			},
+		},
 	}
-
-	stmt := program.Statements[0].(*ast.ExpressionStatement)
-	hash, ok := stmt.Expression.(*ast.DictLiteral)
-	if !ok {
-		t.Fatalf("exp is not ast.DictLiteral. got=%T", stmt.Expression)
-	}
-
-	expected := map[string]int64{
-		"one":   1,
-		"two":   2,
-		"three": 3,
-	}
-
-	if len(hash.Pairs) != len(expected) {
-		t.Errorf("hash.Pairs has wrong length. got=%d", len(hash.Pairs))
-	}
-
-	for key, value := range hash.Pairs {
-		literal, ok := key.(*ast.StringLiteral)
-		if !ok {
-			t.Errorf("key is not ast.StringLiteral. got=%T", key)
-			continue
+	for _, tc := range testCases {
+		l := lexer.New(tc.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Fatalf("%v", err)
 		}
 
-		expectedValue := expected[literal.String()]
-		testIntegerLiteral(t, value, expectedValue)
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+		hash, ok := stmt.Expression.(*ast.DictLiteral)
+		if !ok {
+			t.Fatalf("exp is not ast.DictLiteral. got=%T", stmt.Expression)
+		}
+
+		expected := tc.expected
+
+		if len(hash.Pairs) != len(expected) {
+			t.Errorf("hash.Pairs has wrong length. got=%d", len(hash.Pairs))
+		}
+
+		for key, value := range hash.Pairs {
+			literal, ok := key.(*ast.StringLiteral)
+			if !ok {
+				t.Errorf("key is not ast.StringLiteral. got=%T", key)
+				continue
+			}
+
+			expectedValue := expected[literal.String()]
+			testIntegerLiteral(t, value, expectedValue)
+		}
 	}
 }
 
-func TestParsingHashLiteralsBooleanKeys(t *testing.T) {
+func TestParsingDictLiteralsBooleanKeys(t *testing.T) {
 	input := `{true: 1, false: 2}`
 
 	l := lexer.New(input)
@@ -870,7 +925,7 @@ func TestParsingHashLiteralsBooleanKeys(t *testing.T) {
 	}
 }
 
-func TestParsingHashLiteralsIntegerKeys(t *testing.T) {
+func TestParsingDictLiteralsIntegerKeys(t *testing.T) {
 	input := `{1: 1, 2: 2, 3: 3}`
 
 	l := lexer.New(input)
@@ -909,7 +964,7 @@ func TestParsingHashLiteralsIntegerKeys(t *testing.T) {
 	}
 }
 
-func TestParsingHashLiteralsWithExpressions(t *testing.T) {
+func TestParsingDictLiteralsWithExpressions(t *testing.T) {
 	input := `{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}`
 
 	l := lexer.New(input)
@@ -1223,6 +1278,36 @@ func TestCallExpressionParameterParsing(t *testing.T) {
 					arg, exp.Arguments[i].String())
 			}
 		}
+	}
+}
+
+func TestSyntaxError(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{"var \na= 1"},
+		{"var a\n= 1"},
+		{"var a=\n 1"},
+		{"con \nb= a"},
+		{"con b\n= a"},
+		{"con b=\n a"},
+		{"a \n= 1"},
+		{"a =\n 1"},
+		{"a =\n 1"},
+		{"a and\n 1"},
+		{"if \n(a) {a}"},
+		{"if (a) {a} \n else \n if (b) {b}"},
+		{"while \n(a) {a}"},
+		{"fn \n(a) {a}"},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		_, err := p.ParseProgram()
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		t.Logf("%v", err)
 	}
 }
 

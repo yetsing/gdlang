@@ -9,20 +9,28 @@ import (
 	"weilang/token"
 )
 
+// 换行符（ NEWLINE token ）处理规则
+//   () 括号内可以随意换行
+//   [] {} 列表和字典字面量内可以随意换行
+//   语句前后可以随意换行
+//   语句块（{} 括号包裹的）前后可以随意换行
+
 type Parser struct {
-	l            *lexer.Lexer
-	currToken    token.Token
-	peekToken    token.Token
-	filename     string
-	lines        []string
-	foundNewline bool
+	l         *lexer.Lexer
+	currToken token.Token
+	peekToken token.Token
+	filename  string
+	lines     []string
+	// parenCount 进入的括号数量，用于判断当前解析是否在括号内
+	parenCount int
 }
 
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l:        l,
-		filename: l.Filename,
-		lines:    l.GetLines(),
+		l:          l,
+		filename:   l.Filename,
+		lines:      l.GetLines(),
+		parenCount: 0,
 	}
 	// 填充 currToken 和 peekToken
 	p.nextToken()
@@ -62,6 +70,9 @@ func (p *Parser) program() (*ast.Program, error) {
 
 // block_statement ::= "{" (statement)* "}"
 func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
+	p.skipNewline()
+	defer func() { p.skipNewline() }()
+
 	tok := p.currToken
 	err := p.eat(token.LBRACE)
 	if err != nil {
@@ -89,16 +100,18 @@ func (p *Parser) isStatementEnd() bool {
 	case token.SEMICOLON:
 		p.nextToken()
 		return true
-	case token.RBRACE, token.EOF:
+	case token.NEWLINE, token.RBRACE, token.EOF:
 		return true
 	default:
-		return p.foundNewline
+		return false
 	}
 }
 
 // statement ::= var_statement | con_statement | expression_statement
 // | if_statement
 func (p *Parser) statement() (ast.Statement, error) {
+	p.skipNewline()
+	defer func() { p.skipNewline() }()
 	switch p.currToken.Type {
 	case token.VAR:
 		return p.varStatement()
@@ -228,15 +241,9 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.foundNewline {
-		return nil, p.invalidError()
-	}
 	err = p.eat(token.ASSIGN)
 	if err != nil {
 		return nil, err
-	}
-	if p.foundNewline {
-		return nil, p.invalidError()
 	}
 	expr, err := p.expression()
 	if err != nil {
@@ -270,7 +277,7 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 // if_statement ::= if_branch (else_if_branch)* [else_branch]
 // if_branch      ::= "if" "(" expression ")" block_statement
 // else_if_branch ::= "else" if_branch
-// else_branch    ::= "else" "{" block_statement "}"
+// else_branch    ::= "else" block_statement
 func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 	tok := p.currToken
 	var branches []*ast.IfBranch
@@ -283,9 +290,11 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 
 	for p.currTokenIs(token.ELSE) {
 		p.nextToken()
+		tmp := p.currToken
+		p.skipNewline()
 		if p.currTokenIs(token.IF) {
-			// 判断 else if 在同一行
-			if p.foundNewline {
+			// else 和 if 之间不允许换行
+			if tmp.TypeIs(token.NEWLINE) {
 				return nil, p.syntaxError(`"else" and "if" must be one line`)
 			}
 			branch, err = p.ifBranch()
@@ -315,9 +324,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.foundNewline {
-		return nil, p.invalidError()
-	}
+	p.parenCount++
 	err = p.eat(token.LPAREN)
 	if err != nil {
 		return nil, err
@@ -326,6 +333,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.parenCount--
 	err = p.eat(token.RPAREN)
 	if err != nil {
 		return nil, err
@@ -348,9 +356,7 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.foundNewline {
-		return nil, p.invalidError()
-	}
+	p.parenCount++
 	err = p.eat(token.LPAREN)
 	if err != nil {
 		return nil, err
@@ -359,6 +365,7 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.parenCount--
 	err = p.eat(token.RPAREN)
 	if err != nil {
 		return nil, err
@@ -755,7 +762,8 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 			//  (expr,)
 			//  (expr1,expr2)
 			//  (expr1,expr2,)
-			_ = p.eat(token.LPAREN)
+			p.parenCount++
+			p.nextToken()
 			var arguments []ast.Expression
 			var arg ast.Expression
 			if !p.currTokenIs(token.RPAREN) {
@@ -780,6 +788,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 			if p.currTokenIs(token.COMMA) {
 				_ = p.eat(token.COMMA)
 			}
+			p.parenCount--
 			err = p.eat(token.RPAREN)
 			if err != nil {
 				return nil, err
@@ -851,11 +860,13 @@ func (p *Parser) atom() (ast.Expression, error) {
 		expr = &ast.NullLiteral{Token: p.currToken}
 		p.nextToken()
 	case token.LPAREN:
-		_ = p.eat(token.LPAREN)
+		p.parenCount++
+		p.nextToken()
 		expr, err = p.expression()
 		if err != nil {
 			return nil, err
 		}
+		p.parenCount--
 		err = p.eat(token.RPAREN)
 		if err != nil {
 			return nil, err
@@ -879,6 +890,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 // list_literal ::= "[" [expression] ("," expression)* [","] "]"
 func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 	tok := p.currToken
+	p.parenCount++
 	err := p.eat(token.LBRACKET)
 	if err != nil {
 		return nil, err
@@ -911,6 +923,7 @@ func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 	if p.currTokenIs(token.COMMA) {
 		_ = p.eat(token.COMMA)
 	}
+	p.parenCount--
 	err = p.eat(token.RBRACKET)
 	if err != nil {
 		return nil, err
@@ -929,6 +942,7 @@ func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 // pair         ::= expression ":" expression
 func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 	tok := p.currToken
+	p.parenCount++
 	err := p.eat(token.LBRACE)
 	if err != nil {
 		return nil, err
@@ -973,6 +987,7 @@ func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 	if p.currTokenIs(token.COMMA) {
 		_ = p.eat(token.COMMA)
 	}
+	p.parenCount--
 	err = p.eat(token.RBRACE)
 	if err != nil {
 		return nil, err
@@ -993,6 +1008,7 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.parenCount++
 	err = p.eat(token.LPAREN)
 	if err != nil {
 		return nil, err
@@ -1001,6 +1017,7 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.parenCount--
 	err = p.eat(token.RPAREN)
 	if err != nil {
 		return nil, err
@@ -1078,13 +1095,27 @@ func (p *Parser) eat(t token.TokenType) error {
 }
 
 func (p *Parser) nextToken() {
-	p.foundNewline = false
+	p.doNextToken()
+	p.skipComment()
+	if p.parenCount > 0 {
+		p.skipNewline()
+	}
+}
+
+func (p *Parser) doNextToken() {
 	p.currToken = p.peekToken
 	p.peekToken = p.l.NextToken()
-	for p.currTokenIn(token.NEWLINE, token.COMMENT) {
-		p.foundNewline = true
-		p.currToken = p.peekToken
-		p.peekToken = p.l.NextToken()
+}
+
+func (p *Parser) skipNewline() {
+	for p.currTokenIs(token.NEWLINE) {
+		p.doNextToken()
+	}
+}
+
+func (p *Parser) skipComment() {
+	for p.currTokenIs(token.COMMENT) {
+		p.doNextToken()
 	}
 }
 
@@ -1101,7 +1132,7 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 }
 
 func (p *Parser) expectError(expected token.TokenType) error {
-	msg := fmt.Sprintf("expected %s, but got %s", expected, p.currToken.Type)
+	msg := fmt.Sprintf("expected %q, but got %q", expected, p.currToken.Type)
 	return p.syntaxError(msg)
 }
 
@@ -1110,7 +1141,6 @@ func (p *Parser) invalidError() error {
 }
 
 func (p *Parser) syntaxError(msg string) error {
-	fmt.Printf("SynatxError: current token: %+v\n", p.currToken)
 	// 标注错误的位置
 	template := `
 File "%s", line %d
