@@ -257,7 +257,7 @@ type Expression interface {
 type UnaryExpression struct {
 	Token    token.Token // The prefix token, e.g. !
 	Operator string
-	Right    Expression
+	Operand  Expression
 }
 
 func (pe *UnaryExpression) expressionNode()      {}
@@ -267,7 +267,7 @@ func (pe *UnaryExpression) String() string {
 
 	out.WriteString("(")
 	out.WriteString(pe.Operator)
-	out.WriteString(pe.Right.String())
+	out.WriteString(pe.Operand.String())
 	out.WriteString(")")
 
 	return out.String()

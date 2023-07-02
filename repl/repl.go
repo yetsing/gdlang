@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"weilang/evaluator"
 	"weilang/lexer"
 	"weilang/parser"
 )
@@ -39,8 +40,15 @@ func Start(in io.Reader, out io.Writer) {
 			fmt.Println(err)
 			continue
 		}
-		for _, statement := range program.Statements {
-			fmt.Println(statement.String())
+
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			if _, err := io.WriteString(out, evaluated.String()); err != nil {
+				fmt.Println(err)
+			}
+			if _, err := io.WriteString(out, "\n"); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 }

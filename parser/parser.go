@@ -480,7 +480,7 @@ func (p *Parser) andExpression() (ast.Expression, error) {
 
 // notExpression 解析 not 逻辑表达式
 //
-// not_expression ::= ["not"] comparison_expression
+// not_expression ::= comparison_expression | "not" not_expression
 func (p *Parser) notExpression() (ast.Expression, error) {
 	if !p.currTokenIs(token.NOT) {
 		return p.comparisonExpression()
@@ -488,14 +488,14 @@ func (p *Parser) notExpression() (ast.Expression, error) {
 	tok := p.currToken
 	op := p.currToken.Literal
 	_ = p.eat(token.NOT)
-	right, err := p.comparisonExpression()
+	right, err := p.notExpression()
 	if err != nil {
 		return nil, err
 	}
 	expr := &ast.UnaryExpression{
 		Token:    tok,
 		Operator: op,
-		Right:    right,
+		Operand:  right,
 	}
 	return expr, nil
 }
@@ -688,25 +688,25 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 
 // unaryExpression 解析一元表达式
 //
-// unary_expression ::= [("-" | "~")] primary_expression
+// unary_expression ::= primary_expression | ["-" | "+" | "~"] unary_expression
 func (p *Parser) unaryExpression() (ast.Expression, error) {
 	tok := p.currToken
-	if !p.currTokenIn(token.MINUS, token.BITWISE_NOT) {
+	if !p.currTokenIn(token.MINUS, token.PLUS, token.BITWISE_NOT) {
 		return p.primaryExpression()
 	}
 	op := tok.Literal
-	err := p.eatIn(token.MINUS, token.BITWISE_NOT)
+	err := p.eatIn(token.MINUS, token.PLUS, token.BITWISE_NOT)
 	if err != nil {
 		return nil, err
 	}
-	right, err := p.primaryExpression()
+	right, err := p.unaryExpression()
 	if err != nil {
 		return nil, err
 	}
 	expr := &ast.UnaryExpression{
 		Token:    tok,
 		Operator: op,
-		Right:    right,
+		Operand:  right,
 	}
 	return expr, nil
 }
