@@ -12,6 +12,13 @@ var (
 	FALSE = &object.Boolean{Value: false}
 )
 
+func isError(obj object.Object) bool {
+	if obj != nil {
+		return obj.TypeIs(object.ERROR_OBJ)
+	}
+	return false
+}
+
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 
@@ -30,16 +37,28 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue)
+		if isError(val) {
+			return val
+		}
 		return &object.ReturnValue{Value: val}
 
 	// 表达式
 	case *ast.UnaryExpression:
 		operand := Eval(node.Operand)
+		if isError(operand) {
+			return operand
+		}
 		return evalUnaryExpression(node.Operator, operand)
 
 	case *ast.BinaryOpExpression:
 		left := Eval(node.Left)
+		if isError(left) {
+			return left
+		}
 		right := Eval(node.Right)
+		if isError(right) {
+			return right
+		}
 		return evalBinaryOpExpression(node.Operator, left, right)
 
 	case *ast.IntegerLiteral:
@@ -60,8 +79,12 @@ func evalProgram(program *ast.Program) object.Object {
 
 	for _, statement := range program.Statements {
 		result = Eval(statement)
-		if returnValue, ok := result.(*object.ReturnValue); ok {
-			return returnValue.Value
+
+		switch result := result.(type) {
+		case *object.ReturnValue:
+			return result.Value
+		case *object.Error:
+			return result
 		}
 	}
 	return result
@@ -73,8 +96,10 @@ func evalBlockStatements(block *ast.BlockStatement) object.Object {
 	for _, statement := range block.Statements {
 		result = Eval(statement)
 
-		if result != nil && result.TypeIs(object.RETURN_VALUE_OBJ) {
-			return result
+		if result != nil {
+			if result.TypeIs(object.RETURN_VALUE_OBJ) || result.TypeIs(object.ERROR_OBJ) {
+				return result
+			}
 		}
 	}
 
@@ -84,6 +109,9 @@ func evalBlockStatements(block *ast.BlockStatement) object.Object {
 func evalIfStatement(is *ast.IfStatement) object.Object {
 	for _, branch := range is.IfBranches {
 		condition := Eval(branch.Condition)
+		if isError(condition) {
+			return condition
+		}
 		if isTruthy(condition) {
 			return Eval(branch.Body)
 		}
@@ -124,7 +152,7 @@ func evalUnaryExpression(operator string, right object.Object) object.Object {
 	case "~":
 		return evalBitwiseNotOperatorExpression(right)
 	default:
-		return &object.TypeError{Message: fmt.Sprintf("unknown unary operator '%s'", operator)}
+		return object.NewError("unsupported operand type for %s: '%s'", operator, right.Type())
 	}
 }
 
@@ -134,8 +162,8 @@ func evalNotOperatorExpression(operand object.Object) object.Object {
 
 func evalMinusUnaryOperatorExpression(right object.Object) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
-		message := fmt.Sprintf("bad operand type for unary -: '%s'", right.Type())
-		return &object.TypeError{Message: message}
+		message := fmt.Sprintf("unsupported operand type for -: '%s'", right.Type())
+		return &object.Error{Message: message}
 	}
 
 	value := right.(*object.Integer).Value
@@ -144,8 +172,8 @@ func evalMinusUnaryOperatorExpression(right object.Object) object.Object {
 
 func evalPlusUnaryOperatorExpression(right object.Object) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
-		message := fmt.Sprintf("bad operand type for unary +: '%s'", right.Type())
-		return &object.TypeError{Message: message}
+		message := fmt.Sprintf("unsupported operand type for +: '%s'", right.Type())
+		return &object.Error{Message: message}
 	}
 
 	value := right.(*object.Integer).Value
@@ -155,7 +183,7 @@ func evalPlusUnaryOperatorExpression(right object.Object) object.Object {
 func evalBitwiseNotOperatorExpression(right object.Object) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
 		message := fmt.Sprintf("bad operand type for unary +: '%s'", right.Type())
-		return &object.TypeError{Message: message}
+		return &object.Error{Message: message}
 	}
 
 	value := right.(*object.Integer).Value
@@ -174,9 +202,9 @@ func evalBinaryOpExpression(
 	case operator == "!=":
 		return nativeBoolToBooleanObject(left != right)
 	default:
-		msg := fmt.Sprintf("unsupported operand type(s) for %s: '%s' and '%s'",
+		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
-		return &object.TypeError{Message: msg}
+		return &object.Error{Message: msg}
 	}
 }
 
@@ -221,9 +249,9 @@ func evalIntegerBinaryOpExpression(
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		msg := fmt.Sprintf("unsupported operand type(s) for %s: '%s' and '%s'",
+		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
-		return &object.TypeError{Message: msg}
+		return &object.Error{Message: msg}
 	}
 }
 

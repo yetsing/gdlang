@@ -78,24 +78,28 @@ func (n *Null) String() string {
 	return "null"
 }
 
-type TypeError struct {
+type Error struct {
 	Message string
 }
 
-func (t *TypeError) Type() ObjectType {
+func (e *Error) Type() ObjectType {
 	return ERROR_OBJ
 }
 
-func (t *TypeError) TypeIs(objectType ObjectType) bool {
-	return t.Type() == objectType
+func (e *Error) TypeIs(objectType ObjectType) bool {
+	return e.Type() == objectType
 }
 
-func (t *TypeError) TypeNotIs(objectType ObjectType) bool {
-	return t.Type() != objectType
+func (e *Error) TypeNotIs(objectType ObjectType) bool {
+	return e.Type() != objectType
 }
 
-func (t *TypeError) String() string {
-	return fmt.Sprintf("TypeError: %s", t.Message)
+func (e *Error) String() string {
+	return fmt.Sprintf("Error: %s", e.Message)
+}
+
+func NewError(format string, a ...interface{}) *Error {
+	return &Error{Message: fmt.Sprintf(format, a...)}
 }
 
 type ReturnValue struct {

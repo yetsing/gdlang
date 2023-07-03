@@ -207,6 +207,70 @@ func TestReturnStatements(t *testing.T) {
 	}
 }
 
+func TestErrorHandling(t *testing.T) {
+	tests := []struct {
+		input           string
+		expectedMessage string
+	}{
+		{
+			"5 + true;",
+			"unsupported operand type for +: 'int' and 'bool'",
+		},
+		{
+			"-true",
+			"unsupported operand type for -: 'bool'",
+		},
+		{
+			"true + false;",
+			"unsupported operand type for +: 'bool' and 'bool'",
+		},
+		{
+			"5; true + false; 5",
+			"unsupported operand type for +: 'bool' and 'bool'",
+		},
+		{
+			"if (10 > 1) { true + false; }",
+			"unsupported operand type for +: 'bool' and 'bool'",
+		},
+		{
+			`
+if (10 > 1) {
+  if (10 > 1) {
+    return true + false;
+  }
+
+  return 1;
+}
+`,
+			"unsupported operand type for +: 'bool' and 'bool'",
+		},
+		{
+			"return true + false;",
+			"unsupported operand type for +: 'bool' and 'bool'",
+		},
+		{
+			"if (10 > true) { true + false; }",
+			"unsupported operand type for >: 'int' and 'bool'",
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(t, tt.input)
+
+		errObj, ok := evaluated.(*object.Error)
+		if !ok {
+			t.Errorf("no error object returned. got=%T(%+v)",
+				evaluated, evaluated)
+			continue
+		}
+
+		if errObj.Message != tt.expectedMessage {
+			t.Errorf("wrong error message. expected=%q, got=%q",
+				tt.expectedMessage, errObj.Message)
+		}
+	}
+}
+
 func testNullObject(t *testing.T, obj object.Object) bool {
 	if obj != NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
