@@ -1449,12 +1449,6 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 		return false
 	}
 
-	//if integ.TokenLiteral() != fmt.Sprintf("%d", value) {
-	//	t.Errorf("integ.TokenLiteral not %d. got=%s", value,
-	//		integ.TokenLiteral())
-	//	return false
-	//}
-
 	return true
 }
 

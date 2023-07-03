@@ -68,6 +68,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return evalBinaryOpExpression(node.Operator, left, right)
 
+	case *ast.CallExpression:
+		function := Eval(node.Function, env)
+		if isError(function) {
+			return function
+		}
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+		return applyFunction(function, args)
+
+	case *ast.FunctionLiteral:
+		return object.NewFunction(node, env)
+
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 
@@ -132,6 +146,48 @@ func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object
 	} else {
 		return NULL
 	}
+}
+
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+	function, ok := fn.(*object.Function)
+	if !ok {
+		return object.NewError("not a function: '%s'", fn.Type())
+	}
+
+	if len(args) != len(function.Parameters) {
+		return object.NewError("function expected %d arguments but got %d", len(function.Parameters), len(args))
+	}
+
+	extendedEnv := extendFunctionEnv(function, args)
+	evaluated := Eval(function.Body, extendedEnv)
+	if returnValue, ok := evaluated.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+	return NULL
+}
+
+func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
+	env := object.NewEnclosedEnvironment(fn.Env)
+
+	for paramIdx, parameter := range fn.Parameters {
+		env.Set(parameter.Value, args[paramIdx])
+	}
+
+	return env
+}
+
+func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+	var result []object.Object
+
+	for _, exp := range exps {
+		evaluated := Eval(exp, env)
+		if isError(evaluated) {
+			return []object.Object{evaluated}
+		}
+		result = append(result, evaluated)
+	}
+
+	return result
 }
 
 func isTruthy(obj object.Object) bool {

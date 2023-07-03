@@ -7,6 +7,84 @@ import (
 	"weilang/parser"
 )
 
+func testEval(t *testing.T, input string) object.Object {
+	l := lexer.New(input)
+	p := parser.New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	env := object.NewEnvironment()
+	return Eval(program, env)
+}
+
+func TestFunctionObject(t *testing.T) {
+	input := "fn(x) { x + 2; };"
+
+	evaluated := testEval(t, input)
+	fn, ok := evaluated.(*object.Function)
+	if !ok {
+		t.Fatalf("object is not Function. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(fn.Parameters) != 1 {
+		t.Fatalf("function has wrong parameters. Parameters=%+v",
+			fn.Parameters)
+	}
+
+	if fn.Parameters[0].String() != "x" {
+		t.Fatalf("parameter is not 'x'. got=%q", fn.Parameters[0])
+	}
+
+	expectedBody := "{\n(x + 2)\n}"
+
+	if fn.Body.String() != expectedBody {
+		t.Fatalf("body is not %q. got=%q", expectedBody, fn.Body.String())
+	}
+}
+
+func TestFunctionApplication(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"var identity = fn(x) { return x; }; identity(5);", 5},
+		{"var double = fn(x) { return x * 2; }; double(5);", 10},
+		{"var add = fn(x, y) { return x + y; }; add(5, 5);", 10},
+		{"var add = fn(x, y) { return x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) { return x; }(5)", 5},
+		{"var a = 10; fn(x) { var a = 4; }; a", 10},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(t, tt.input), tt.expected)
+	}
+
+	atests := []struct {
+		input string
+	}{
+		{"var identity = fn(x) { x; }; identity(5);"},
+	}
+
+	for _, tt := range atests {
+		got := testEval(t, tt.input)
+		testNullObject(t, got)
+	}
+}
+
+func TestClosures(t *testing.T) {
+	input := `
+var newAdder = fn(x) {
+  fn(y) { x + y };
+};
+
+var addTwo = newAdder(2);
+addTwo(2);`
+
+	testIntegerObject(t, testEval(t, input), 4)
+}
+
 func TestVarStatements(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -156,18 +234,6 @@ func TestNumberUnaryOperator(t *testing.T) {
 	}
 }
 
-func testEval(t *testing.T, input string) object.Object {
-	l := lexer.New(input)
-	p := parser.New(l)
-	program, err := p.ParseProgram()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	env := object.NewEnvironment()
-	return Eval(program, env)
-}
-
 func TestIfElseStatements(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -272,6 +338,10 @@ if (10 > 1) {
 		{
 			"foobar",
 			"identifier not found: 'foobar'",
+		},
+		{
+			"var foo = fn(){}; foo(1);",
+			"function expected 0 arguments but got 1",
 		},
 	}
 

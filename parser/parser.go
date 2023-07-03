@@ -502,7 +502,7 @@ func (p *Parser) notExpression() (ast.Expression, error) {
 
 // comparisonExpression 解析关系表达式
 //
-// comparison_expression ::= shift_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) shift_expression)*
+// comparison_expression ::= bitwise_xor_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) bitwise_xor_expression)*
 func (p *Parser) comparisonExpression() (ast.Expression, error) {
 	tok := p.currToken
 	expr, err := p.bitwiseOrExpression()
@@ -786,7 +786,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 				arguments = append(arguments, arg)
 			}
 			if p.currTokenIs(token.COMMA) {
-				_ = p.eat(token.COMMA)
+				p.nextToken()
 			}
 			p.parenCount--
 			err = p.eat(token.RPAREN)
