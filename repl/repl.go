@@ -7,6 +7,7 @@ import (
 	"io"
 	"weilang/evaluator"
 	"weilang/lexer"
+	"weilang/object"
 	"weilang/parser"
 )
 
@@ -19,6 +20,7 @@ var PROMPT = START_PROMPT
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
 
 	var buffer bytes.Buffer
 	for {
@@ -41,7 +43,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		evaluated := evaluator.Eval(program)
+		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
 			if _, err := io.WriteString(out, evaluated.String()); err != nil {
 				fmt.Println(err)

@@ -7,6 +7,22 @@ import (
 	"weilang/parser"
 )
 
+func TestVarStatements(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"var a = 5; a;", 5},
+		{"var a = 5 * 5; a;", 25},
+		{"var a = 5; var b = a; b;", 5},
+		{"var a = 5; var b = a; var c = a + b + 5; c;", 15},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(t, tt.input), tt.expected)
+	}
+}
+
 func TestEvalIntegerExpression(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -148,7 +164,8 @@ func testEval(t *testing.T, input string) object.Object {
 		t.Fatalf("%v", err)
 	}
 
-	return Eval(program)
+	env := object.NewEnvironment()
+	return Eval(program, env)
 }
 
 func TestIfElseStatements(t *testing.T) {
@@ -251,6 +268,10 @@ if (10 > 1) {
 		{
 			"if (10 > true) { true + false; }",
 			"unsupported operand type for >: 'int' and 'bool'",
+		},
+		{
+			"foobar",
+			"identifier not found: 'foobar'",
 		},
 	}
 
