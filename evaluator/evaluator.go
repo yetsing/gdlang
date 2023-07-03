@@ -85,6 +85,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
+
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 
@@ -261,8 +264,11 @@ func evalBinaryOpExpression(
 	left, right object.Object,
 ) object.Object {
 	switch {
-	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
+	case left.TypeIs(object.INTEGER_OBJ) && right.TypeIs(object.INTEGER_OBJ):
 		return evalIntegerBinaryOpExpression(operator, left, right)
+	case left.TypeIs(object.STRING_OBJ) && right.TypeIs(object.STRING_OBJ):
+		return evalStringBinaryOpExpression(operator, left, right)
+
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -319,6 +325,19 @@ func evalIntegerBinaryOpExpression(
 			operator, left.Type(), right.Type())
 		return &object.Error{Message: msg}
 	}
+}
+
+func evalStringBinaryOpExpression(
+	operator string,
+	left, right object.Object,
+) object.Object {
+	if operator != "+" {
+		return object.NewError("unsupported operand type for %s: 'str' and 'str'", operator)
+	}
+
+	leftVal := left.(*object.String).Value
+	rightVal := right.(*object.String).Value
+	return &object.String{Value: leftVal + rightVal}
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {

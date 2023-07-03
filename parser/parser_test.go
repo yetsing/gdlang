@@ -1094,6 +1094,7 @@ func TestStringLiteralExpression(t *testing.T) {
 		{`"hello world"`, "hello world"},
 		{`'hello world2';`, "hello world2"},
 		{"`hello\nworld3`", "hello\nworld3"},
+		{"`hello\n\t\\\"world3`", "hello\n\t\\\"world3"},
 	}
 	for i, tt := range tests {
 		l := lexer.New(tt.input)

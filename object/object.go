@@ -14,6 +14,7 @@ const (
 	ERROR_OBJ        = "error"
 	RETURN_VALUE_OBJ = "return_value"
 	FUNCTION_OBJ     = "function"
+	STRING_OBJ       = "str"
 )
 
 type Object interface {
@@ -154,4 +155,24 @@ func (f *Function) TypeNotIs(objectType ObjectType) bool {
 
 func (f *Function) String() string {
 	return fmt.Sprintf("<function at %p>", f)
+}
+
+type String struct {
+	Value string
+}
+
+func (s *String) Type() ObjectType {
+	return STRING_OBJ
+}
+
+func (s *String) TypeIs(objectType ObjectType) bool {
+	return s.Type() == objectType
+}
+
+func (s *String) TypeNotIs(objectType ObjectType) bool {
+	return s.Type() != objectType
+}
+
+func (s *String) String() string {
+	return s.Value
 }

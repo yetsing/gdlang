@@ -76,7 +76,7 @@ func TestFunctionApplication(t *testing.T) {
 func TestClosures(t *testing.T) {
 	input := `
 var newAdder = fn(x) {
-  fn(y) { x + y };
+  return fn(y) { return x + y };
 };
 
 var addTwo = newAdder(2);
@@ -343,6 +343,10 @@ if (10 > 1) {
 			"var foo = fn(){}; foo(1);",
 			"function expected 0 arguments but got 1",
 		},
+		{
+			`"5" - "true";`,
+			"unsupported operand type for -: 'str' and 'str'",
+		},
 	}
 
 	for _, tt := range tests {
@@ -362,6 +366,34 @@ if (10 > 1) {
 	}
 }
 
+func TestStringLiteral(t *testing.T) {
+	input := `"Hello World!"`
+
+	evaluated := testEval(t, input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestStringConcatenation(t *testing.T) {
+	input := `"Hello" + " " + "World!"`
+
+	evaluated := testEval(t, input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
 func testNullObject(t *testing.T, obj object.Object) bool {
 	if obj != NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
@@ -371,6 +403,7 @@ func testNullObject(t *testing.T, obj object.Object) bool {
 }
 
 func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
+	t.Helper()
 	result, ok := obj.(*object.Integer)
 	if !ok {
 		t.Errorf("object is not Integer. got=%T (%+v)", obj, obj)
