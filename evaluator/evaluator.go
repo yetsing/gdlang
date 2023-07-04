@@ -90,6 +90,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return evalSubscriptionExpression(left, index)
 
+	case *ast.DictLiteral:
+		return evalDictLiteral(node, env)
+
 	case *ast.ListLiteral:
 		elements := evalExpressions(node.Elements, env)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -206,6 +209,8 @@ func evalSubscriptionExpression(left, index object.Object) object.Object {
 	switch {
 	case left.TypeIs(object.LIST_OBJ) && index.TypeIs(object.INTEGER_OBJ):
 		return evalListSubscriptionExpression(left, index)
+	case left.TypeIs(object.DICT_OBJ):
+		return evalDictSubscriptionExpression(left, index)
 	default:
 		return object.NewError("'%s' object is not subscriptable", left.Type())
 	}
@@ -226,6 +231,21 @@ func evalListSubscriptionExpression(list, index object.Object) object.Object {
 	return listObject.Elements[idx]
 }
 
+func evalDictSubscriptionExpression(dict, index object.Object) object.Object {
+	dictObject := dict.(*object.Dict)
+
+	key, ok := index.(object.Hashable)
+	if !ok {
+		return object.NewError("unhashable type: '%s'", index.Type())
+	}
+
+	pair, ok := dictObject.Pairs[key.HashKey()]
+	if !ok {
+		return object.NewError("key '%s' does not exist", index.String())
+	}
+	return pair.Value
+}
+
 func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
 	var result []object.Object
 
@@ -238,6 +258,34 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 	}
 
 	return result
+}
+
+func evalDictLiteral(node *ast.DictLiteral, env *object.Environment) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	for keyNode, valueNode := range node.Pairs {
+		key := Eval(keyNode, env)
+		if isError(key) {
+			return key
+		}
+
+		hashKey, ok := key.(object.Hashable)
+		if !ok {
+			return object.NewError("unhashable type: '%s'", key.Type())
+		}
+
+		value := Eval(valueNode, env)
+		if isError(value) {
+			return value
+		}
+
+		hashed := hashKey.HashKey()
+		pairs[hashed] = object.HashPair{
+			Key:   key,
+			Value: value,
+		}
+	}
+	return &object.Dict{Pairs: pairs}
 }
 
 func isTruthy(obj object.Object) bool {

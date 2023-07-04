@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"weilang/ast"
 )
@@ -19,6 +20,7 @@ const (
 	STRING_OBJ       = "str"
 	BUILTIN_OBJ      = "builtin"
 	LIST_OBJ         = "list"
+	DICT_OBJ         = "dict"
 )
 
 type Object interface {
@@ -230,5 +232,78 @@ func (l *List) String() string {
 	out.WriteString("[")
 	out.WriteString(strings.Join(elements, ", "))
 	out.WriteString("]")
+	return out.String()
+}
+
+type Hashable interface {
+	HashKey() HashKey
+}
+
+type HashKey struct {
+	Type  ObjectType
+	Value uint64
+}
+
+func (b *Boolean) HashKey() HashKey {
+	var value uint64
+
+	if b.Value {
+		value = 1
+	} else {
+		value = 0
+	}
+
+	return HashKey{Type: b.Type(), Value: value}
+}
+
+func (i *Integer) HashKey() HashKey {
+	return HashKey{
+		Type:  i.Type(),
+		Value: uint64(i.Value),
+	}
+}
+
+func (s *String) HashKey() HashKey {
+	h := fnv.New64a()
+	h.Write([]byte(s.Value))
+
+	return HashKey{
+		Type:  s.Type(),
+		Value: h.Sum64(),
+	}
+}
+
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+type Dict struct {
+	Pairs map[HashKey]HashPair
+}
+
+func (d *Dict) Type() ObjectType {
+	return DICT_OBJ
+}
+
+func (d *Dict) TypeIs(objectType ObjectType) bool {
+	return d.Type() == objectType
+}
+
+func (d *Dict) TypeNotIs(objectType ObjectType) bool {
+	return d.Type() != objectType
+}
+
+func (d *Dict) String() string {
+	var out bytes.Buffer
+
+	var elements []string
+	for _, pair := range d.Pairs {
+		elements = append(elements, fmt.Sprintf("%s: %s", pair.Key.String(), pair.Value.String()))
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("}")
 	return out.String()
 }
