@@ -79,6 +79,24 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return applyFunction(function, args)
 
+	case *ast.SubscriptionExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+		return evalSubscriptionExpression(left, index)
+
+	case *ast.ListLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+		return &object.List{Elements: elements}
+
 	case *ast.FunctionLiteral:
 		return object.NewFunction(node, env)
 
@@ -154,6 +172,9 @@ func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object
 func applyFunction(fn object.Object, args []object.Object) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
+		if len(args) != len(fn.Parameters) {
+			return object.NewError("function expected %d arguments but got %d", len(fn.Parameters), len(args))
+		}
 		extendedEnv := extendFunctionEnv(fn, args)
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated)
@@ -179,6 +200,30 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 	}
 
 	return env
+}
+
+func evalSubscriptionExpression(left, index object.Object) object.Object {
+	switch {
+	case left.TypeIs(object.LIST_OBJ) && index.TypeIs(object.INTEGER_OBJ):
+		return evalListSubscriptionExpression(left, index)
+	default:
+		return object.NewError("'%s' object is not subscriptable", left.Type())
+	}
+}
+
+func evalListSubscriptionExpression(list, index object.Object) object.Object {
+	listObject := list.(*object.List)
+	idx := index.(*object.Integer).Value
+	length := int64(len(listObject.Elements))
+	if idx < 0 {
+		idx += length
+	}
+
+	if idx < 0 || idx > length-1 {
+		return object.NewError("list index out of range")
+	}
+
+	return listObject.Elements[idx]
 }
 
 func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {

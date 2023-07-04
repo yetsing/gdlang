@@ -95,6 +95,10 @@ func (t *Token) TypeIs(ttype TokenType) bool {
 	return t.Type == ttype
 }
 
+func (t *Token) TypeIsNot(ttype TokenType) bool {
+	return t.Type != ttype
+}
+
 func (t *Token) TypeIn(ttypes ...TokenType) bool {
 	for _, ttype := range ttypes {
 		if t.TypeIs(ttype) {

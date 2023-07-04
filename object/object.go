@@ -1,7 +1,9 @@
 package object
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"weilang/ast"
 )
 
@@ -16,6 +18,7 @@ const (
 	FUNCTION_OBJ     = "function"
 	STRING_OBJ       = "str"
 	BUILTIN_OBJ      = "builtin"
+	LIST_OBJ         = "list"
 )
 
 type Object interface {
@@ -198,4 +201,34 @@ func (b *Builtin) TypeNotIs(objectType ObjectType) bool {
 
 func (b *Builtin) String() string {
 	return "<builtin function>"
+}
+
+type List struct {
+	Elements []Object
+}
+
+func (l *List) Type() ObjectType {
+	return LIST_OBJ
+}
+
+func (l *List) TypeIs(objectType ObjectType) bool {
+	return l.Type() == objectType
+}
+
+func (l *List) TypeNotIs(objectType ObjectType) bool {
+	return l.Type() != objectType
+}
+
+func (l *List) String() string {
+	var out bytes.Buffer
+
+	var elements []string
+	for _, e := range l.Elements {
+		elements = append(elements, e.String())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+	return out.String()
 }

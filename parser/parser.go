@@ -757,36 +757,11 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 				Attribute: ident,
 			}
 		case token.LPAREN:
-			// 这么几种情况
-			//  ()
-			//  (expr,)
-			//  (expr1,expr2)
-			//  (expr1,expr2,)
 			p.parenCount++
 			p.nextToken()
-			var arguments []ast.Expression
-			var arg ast.Expression
-			if !p.currTokenIs(token.RPAREN) {
-				arg, err = p.expression()
-				if err != nil {
-					return nil, err
-				}
-				arguments = append(arguments, arg)
-			}
-			for p.currTokenIs(token.COMMA) {
-				_ = p.eat(token.COMMA)
-				// 只有一个参数，后面有个逗号
-				if p.currTokenIs(token.RPAREN) {
-					break
-				}
-				arg, err = p.expression()
-				if err != nil {
-					return nil, err
-				}
-				arguments = append(arguments, arg)
-			}
-			if p.currTokenIs(token.COMMA) {
-				p.nextToken()
+			arguments, err := p.expressionList(token.RPAREN)
+			if err != nil {
+				return nil, err
 			}
 			p.parenCount--
 			err = p.eat(token.RPAREN)
@@ -895,33 +870,9 @@ func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	var elements []ast.Expression
-	var ele ast.Expression
-	// 有下面几种情况
-	//  []
-	//  [expr]
-	//  [expr,]
-	//  [expr1,expr2]
-	if !p.currTokenIs(token.RBRACKET) {
-		ele, err = p.expression()
-		if err != nil {
-			return nil, err
-		}
-		elements = append(elements, ele)
-	}
-	for p.currTokenIs(token.COMMA) {
-		_ = p.eat(token.COMMA)
-		if p.currTokenIs(token.RBRACKET) {
-			break
-		}
-		ele, err = p.expression()
-		if err != nil {
-			return nil, err
-		}
-		elements = append(elements, ele)
-	}
-	if p.currTokenIs(token.COMMA) {
-		_ = p.eat(token.COMMA)
+	elements, err := p.expressionList(token.RBRACKET)
+	if err != nil {
+		return nil, err
 	}
 	p.parenCount--
 	err = p.eat(token.RBRACKET)
@@ -933,6 +884,41 @@ func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 		Elements: elements,
 	}
 	return expr, nil
+}
+
+// expression_list ::= [expression] ("," expression)* [","]
+func (p *Parser) expressionList(end token.TokenType) ([]ast.Expression, error) {
+	var elements []ast.Expression
+	var ele ast.Expression
+	var err error
+	// 有下面几种情况
+	//  <空>
+	//  expr
+	//  expr,
+	//  expr1,expr2
+	//  expr1,expr2,
+	if p.currTokenIsNot(end) {
+		ele, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, ele)
+	}
+	for p.currTokenIs(token.COMMA) {
+		p.nextToken()
+		if p.currTokenIs(end) {
+			break
+		}
+		ele, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, ele)
+	}
+	if p.currTokenIs(token.COMMA) {
+		p.nextToken()
+	}
+	return elements, nil
 }
 
 // dictLiteral 解析字典字面量
@@ -1001,7 +987,7 @@ func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 
 // functionLiteral 解析函数定义
 //
-// function_literal ::= "fn" "(" parameter_list ")" "{" block_statement "}"
+// function_literal ::= "fn" "(" parameter_list ")" block_statement
 func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	tok := p.currToken
 	err := p.eat(token.FUNCTION)
@@ -1125,6 +1111,10 @@ func (p *Parser) currTokenIn(ts ...token.TokenType) bool {
 
 func (p *Parser) currTokenIs(t token.TokenType) bool {
 	return p.currToken.TypeIs(t)
+}
+
+func (p *Parser) currTokenIsNot(t token.TokenType) bool {
+	return p.currToken.TypeIsNot(t)
 }
 
 func (p *Parser) peekTokenIs(t token.TokenType) bool {

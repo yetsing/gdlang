@@ -347,6 +347,10 @@ if (10 > 1) {
 			`"5" - "true";`,
 			"unsupported operand type for -: 'str' and 'str'",
 		},
+		{
+			"[1, 2, 3][3]",
+			"list index out of range",
+		},
 	}
 
 	for _, tt := range tests {
@@ -404,6 +408,10 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`len("hello world")`, 11},
 		{`len(1)`, "object of type 'int' has no len()"},
 		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+		{`len([])`, 0},
+		{`len([1 + 1])`, 1},
+		{`len(["one", "two"])`, 2},
+		{`len(["one", "two",])`, 2},
 	}
 
 	for _, tt := range tests {
@@ -423,6 +431,80 @@ func TestBuiltinFunctions(t *testing.T) {
 				t.Errorf("wrong error message. expected=%q, got=%q",
 					expected, errObj.Message)
 			}
+		}
+	}
+}
+
+func TestListLiterals(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(t, input)
+	result, ok := evaluated.(*object.List)
+	if !ok {
+		t.Fatalf("object is not Array. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		t.Fatalf("array has wrong num of elements. got=%d",
+			len(result.Elements))
+	}
+
+	testIntegerObject(t, result.Elements[0], 1)
+	testIntegerObject(t, result.Elements[1], 4)
+	testIntegerObject(t, result.Elements[2], 6)
+}
+
+func TestListSubscriptionExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			"[1, 2, 3][0]",
+			1,
+		},
+		{
+			"[1, 2, 3][1]",
+			2,
+		},
+		{
+			"[1, 2, 3][2]",
+			3,
+		},
+		{
+			"var i = 0; [1][i];",
+			1,
+		},
+		{
+			"[1, 2, 3][1 + 1];",
+			3,
+		},
+		{
+			"var myArray = [1, 2, 3]; myArray[2];",
+			3,
+		},
+		{
+			"var myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+			6,
+		},
+		{
+			"var myArray = [1, 2, 3]; var i = myArray[0]; myArray[i]",
+			2,
+		},
+
+		{
+			"[1, 2, 3][-1]",
+			3,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(t, tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNullObject(t, evaluated)
 		}
 	}
 }
