@@ -152,18 +152,20 @@ func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
-	function, ok := fn.(*object.Function)
-	if !ok {
+	switch fn := fn.(type) {
+	case *object.Function:
+		extendedEnv := extendFunctionEnv(fn, args)
+		evaluated := Eval(fn.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
+	case *object.Builtin:
+		return fn.Fn(args...)
+	default:
 		return object.NewError("not a function: '%s'", fn.Type())
 	}
+}
 
-	if len(args) != len(function.Parameters) {
-		return object.NewError("function expected %d arguments but got %d", len(function.Parameters), len(args))
-	}
-
-	extendedEnv := extendFunctionEnv(function, args)
-	evaluated := Eval(function.Body, extendedEnv)
-	if returnValue, ok := evaluated.(*object.ReturnValue); ok {
+func unwrapReturnValue(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
 		return returnValue.Value
 	}
 	return NULL
@@ -341,11 +343,14 @@ func evalStringBinaryOpExpression(
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
-	val, ok := env.Get(node.Value)
-	if !ok {
-		return object.NewError("identifier not found: '%s'", node.Value)
+	if val, ok := env.Get(node.Value); ok {
+		return val
 	}
-	return val
+
+	if builtin, ok := builtins[node.Value]; ok {
+		return builtin
+	}
+	return object.NewError("identifier not found: '%s'", node.Value)
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {

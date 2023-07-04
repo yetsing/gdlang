@@ -15,6 +15,7 @@ const (
 	RETURN_VALUE_OBJ = "return_value"
 	FUNCTION_OBJ     = "function"
 	STRING_OBJ       = "str"
+	BUILTIN_OBJ      = "builtin"
 )
 
 type Object interface {
@@ -175,4 +176,26 @@ func (s *String) TypeNotIs(objectType ObjectType) bool {
 
 func (s *String) String() string {
 	return s.Value
+}
+
+type BuiltinFunction func(args ...Object) Object
+
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+func (b *Builtin) Type() ObjectType {
+	return BUILTIN_OBJ
+}
+
+func (b *Builtin) TypeIs(objectType ObjectType) bool {
+	return b.Type() == objectType
+}
+
+func (b *Builtin) TypeNotIs(objectType ObjectType) bool {
+	return b.Type() != objectType
+}
+
+func (b *Builtin) String() string {
+	return "<builtin function>"
 }
