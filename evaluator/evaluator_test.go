@@ -19,6 +19,31 @@ func testEval(t *testing.T, input string) object.Object {
 	return Eval(program, env)
 }
 
+func TestEnclosedEnvironment(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"var a = 5; a;", 5},
+		{"var a = 5 * 5; fn() {var a = 0}; a", 25},
+		{`
+				var foo = fn(a) {
+					if(1){
+						var a = 2 
+					}
+					return a;
+				}
+				var b = foo(10)
+				b`,
+			10,
+		},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(t, tt.input), tt.expected)
+	}
+}
+
 func TestFunctionObject(t *testing.T) {
 	input := "fn(x) { x + 2; };"
 
@@ -54,7 +79,8 @@ func TestFunctionApplication(t *testing.T) {
 		{"var add = fn(x, y) { return x + y; }; add(5, 5);", 10},
 		{"var add = fn(x, y) { return x + y; }; add(5 + 5, add(5, 5));", 20},
 		{"fn(x) { return x; }(5)", 5},
-		{"var a = 10; fn(x) { var a = 4; }; a", 10},
+		{"var a = 10; fn(x) { var a = 4; }(10); a", 10},
+		{"con a = 10; fn(a) { return a }(30)", 30},
 	}
 
 	for _, tt := range tests {
@@ -94,6 +120,23 @@ func TestVarStatements(t *testing.T) {
 		{"var a = 5 * 5; a;", 25},
 		{"var a = 5; var b = a; b;", 5},
 		{"var a = 5; var b = a; var c = a + b + 5; c;", 15},
+		{"var a = 5; var b = a; b = a + b + 5; b;", 15},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(t, tt.input), tt.expected)
+	}
+}
+
+func TestConStatements(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"con a = 5; a;", 5},
+		{"con a = 5 * 5; a;", 25},
+		{"con a = 5; var b = a; b;", 5},
+		{"con a = 5; con b = a; con c = a + b + 5; c;", 15},
 	}
 
 	for _, tt := range tests {
@@ -370,6 +413,14 @@ if (10 > 1) {
 		{
 			`{}[fn(){}]`,
 			"unhashable type: 'function'",
+		},
+		{
+			`con a = 1; a = 2`,
+			"cannot assign to constant: 'a'",
+		},
+		{
+			`var a = 1; var a = 1`,
+			"variable name 'a' redeclared in this block",
 		},
 	}
 

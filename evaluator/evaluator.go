@@ -34,7 +34,30 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
-		env.Set(node.Name.Value, val)
+		ret := env.Add(node.Name.Value, val, false)
+		if isError(ret) {
+			return ret
+		}
+
+	case *ast.ConStatement:
+		val := Eval(node.Value, env)
+		if isError(val) {
+			return val
+		}
+		ret := env.Add(node.Name.Value, val, true)
+		if isError(ret) {
+			return ret
+		}
+
+	case *ast.AssignStatement:
+		val := Eval(node.Value, env)
+		if isError(val) {
+			return val
+		}
+		ret := env.Set(node.Name.Value, val)
+		if isError(ret) {
+			return ret
+		}
 
 	case *ast.IfStatement:
 		return evalIfStatement(node, env)
@@ -141,8 +164,9 @@ func evalProgram(program *ast.Program, env *object.Environment) object.Object {
 func evalBlockStatements(block *ast.BlockStatement, env *object.Environment) object.Object {
 	var result object.Object
 
+	blockEnv := object.NewEnclosedEnvironment(env)
 	for _, statement := range block.Statements {
-		result = Eval(statement, env)
+		result = Eval(statement, blockEnv)
 
 		if result != nil {
 			if result.TypeIs(object.RETURN_VALUE_OBJ) || result.TypeIs(object.ERROR_OBJ) {
@@ -180,6 +204,9 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		}
 		extendedEnv := extendFunctionEnv(fn, args)
 		evaluated := Eval(fn.Body, extendedEnv)
+		if isError(evaluated) {
+			return evaluated
+		}
 		return unwrapReturnValue(evaluated)
 	case *object.Builtin:
 		return fn.Fn(args...)
@@ -199,7 +226,7 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for paramIdx, parameter := range fn.Parameters {
-		env.Set(parameter.Value, args[paramIdx])
+		env.Pass(parameter.Value, args[paramIdx])
 	}
 
 	return env
