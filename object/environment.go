@@ -16,6 +16,14 @@ type Environment struct {
 	outer *Environment
 }
 
+func (e *Environment) Add(name string, val Object) Object {
+	if _, ok := e.store[name]; ok {
+		return NewError("variable name '%s' redeclared in this block", name)
+	}
+	e.store[name] = val
+	return val
+}
+
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {
