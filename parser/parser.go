@@ -71,7 +71,6 @@ func (p *Parser) program() (*ast.Program, error) {
 // block_statement ::= "{" (statement)* "}"
 func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 	p.skipNewline()
-	defer func() { p.skipNewline() }()
 
 	tok := p.currToken
 	err := p.eat(token.LBRACE)
@@ -79,6 +78,7 @@ func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 		return nil, err
 	}
 	block := &ast.BlockStatement{Token: tok}
+	p.skipNewline()
 
 	for !p.currTokenIs(token.RBRACE) {
 		stmt, err := p.statement()
@@ -287,6 +287,13 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 		return nil, err
 	}
 	branches = append(branches, branch)
+	// 这些判断用来保证不会有这种写法————语句紧跟在 } 后面，如下所示
+	// if(1) {}var a = 1
+	// 第一个 if 块之后，后面的 token 要么是换行、要么是 else 、要么是 EOF
+	if !p.currTokenIn(token.NEWLINE, token.ELSE, token.EOF) {
+		return nil, p.expectError(token.NEWLINE)
+	}
+	p.skipNewline()
 
 	for p.currTokenIs(token.ELSE) {
 		p.nextToken()
@@ -302,8 +309,17 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 				return nil, err
 			}
 			branches = append(branches, branch)
+			// else if 块之后，后面的 token 要么是换行、要么是 else 、要么是 EOF
+			if !p.currTokenIn(token.NEWLINE, token.ELSE, token.EOF) {
+				return nil, p.expectError(token.NEWLINE)
+			}
+			p.skipNewline()
 		} else {
 			elseBody, err = p.blockStatement()
+			if err != nil {
+				return nil, err
+			}
+			err = p.eatIn(token.NEWLINE, token.EOF)
 			if err != nil {
 				return nil, err
 			}
@@ -371,6 +387,12 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 		return nil, err
 	}
 	body, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	// 这些判断用来保证不会有这种写法————语句紧跟在 } 后面，如下所示
+	// while(1) {}var a = 1
+	err = p.eatIn(token.NEWLINE, token.EOF)
 	if err != nil {
 		return nil, err
 	}

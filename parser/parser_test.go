@@ -7,6 +7,126 @@ import (
 	"weilang/lexer"
 )
 
+func TestProgram(t *testing.T) {
+	input := `
+var foo = fn(a) {
+	if(1){
+		var a = 2 
+	}
+	return a;
+}
+var b = foo(10)
+b
+
+if(2) 
+{} 
+else {
+}
+b = b + 2
+
+if(2) 
+{} 
+else if (4) {
+}
+b = b + 2
+
+while(2){}
+b = b + 2
+
+while(2)
+{
+var d = 1}
+
+b = b + 2
+`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) < 3 {
+		t.Fatalf("program.Statements does not contain 3 statements. got=%d",
+			len(program.Statements))
+	}
+
+	stmt := program.Statements[0].(*ast.VarStatement)
+	if !testVarStatement(t, stmt, "foo") {
+		return
+	}
+	function, ok := stmt.Value.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Value is not ast.FunctionLiteral. got=%T",
+			stmt.Value)
+	}
+	if len(function.Parameters) != 1 {
+		t.Fatalf("function literal parameters wrong. want 1, got=%d\n",
+			len(function.Parameters))
+	}
+	testLiteralExpression(t, function.Parameters[0], "a")
+	if len(function.Body.Statements) != 2 {
+		t.Fatalf("function.Body.Statements has not 2 statements. got=%d\n",
+			len(function.Body.Statements))
+	}
+	ifStmt, ok := function.Body.Statements[0].(*ast.IfStatement)
+	if !ok {
+		t.Fatalf("function body stmt is not ast.IfStatement. got=%T",
+			function.Body.Statements[0])
+	}
+	if len(ifStmt.IfBranches) != 1 {
+		t.Fatalf("if stmt has not 1 branches. got=%d", len(ifStmt.IfBranches))
+	}
+	if !testIntegerLiteral(t, ifStmt.IfBranches[0].Condition, 1) {
+		return
+	}
+	if len(ifStmt.IfBranches[0].Body.Statements) != 1 {
+		t.Fatalf("if branch has not 1 statement. got=%d", len(ifStmt.IfBranches[0].Body.Statements))
+	}
+	ifBody, ok := ifStmt.IfBranches[0].Body.Statements[0].(*ast.VarStatement)
+	if !ok {
+		t.Fatalf("if branch body is not ast.VarStatement. got=%T", ifStmt.IfBranches[0].Body.Statements[0])
+	}
+	if !testVarStatement(t, ifBody, "a") {
+		return
+	}
+	if !testIntegerLiteral(t, ifBody.Value, 2) {
+		return
+	}
+	if ifStmt.ElseBody != nil {
+		t.Fatalf("if stmt has not else. got=%T", ifStmt.ElseBody)
+	}
+
+	returnStmt, ok := function.Body.Statements[1].(*ast.ReturnStatement)
+	if !ok {
+		t.Fatalf("function body stmt is not ast.ReturnStatement. got=%T",
+			function.Body.Statements[0])
+	}
+	if !testIdentifier(t, returnStmt.ReturnValue, "a") {
+		return
+	}
+
+	varStmt, ok := program.Statements[1].(*ast.VarStatement)
+	if !ok {
+		t.Fatalf("program.Statements[1] is not ast.VarStatement. got=%T", program.Statements[1])
+	}
+	if !testVarStatement(t, varStmt, "b") {
+		return
+	}
+	if varStmt.Value.String() != "foo(10)" {
+		t.Fatalf("value got=%s", varStmt.Value.String())
+	}
+
+	exprStmt, ok := program.Statements[2].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[2] is not ast.ExpressionStatement. got=%T", program.Statements[2])
+	}
+	if !testIdentifier(t, exprStmt.Expression, "b") {
+		return
+	}
+}
+
 func TestVarStatements(t *testing.T) {
 	tests := []struct {
 		input              string
@@ -1300,6 +1420,10 @@ func TestSyntaxError(t *testing.T) {
 		{"if (a) {a} \n else \n if (b) {b}"},
 		{"while \n(a) {a}"},
 		{"fn \n(a) {a}"},
+		{"fn(a) {a} var b = 2"},
+		{"if(a) {a} var b = 2"},
+		{"if(a) {a} else {} var b = 2"},
+		{"while(a) {a} var b = 2"},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -1308,7 +1432,7 @@ func TestSyntaxError(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		t.Logf("%v", err)
+		//t.Logf("%v", err)
 	}
 }
 
