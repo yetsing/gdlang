@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"weilang/ast"
 	"weilang/evaluator"
 	"weilang/lexer"
 	"weilang/object"
@@ -45,6 +46,12 @@ func Start(in io.Reader, out io.Writer) {
 
 		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
+			n := len(program.Statements)
+			// 如果最后一条语句不是表达式语句，不要输出任何值
+			if _, ok := program.Statements[n-1].(*ast.ExpressionStatement); !ok {
+				continue
+			}
+
 			if _, err := io.WriteString(out, evaluated.String()); err != nil {
 				fmt.Println(err)
 			}

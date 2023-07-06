@@ -7,9 +7,11 @@ import (
 )
 
 var (
-	NULL  = &object.Null{}
-	TRUE  = &object.Boolean{Value: true}
-	FALSE = &object.Boolean{Value: false}
+	NULL           = &object.Null{}
+	TRUE           = &object.Boolean{Value: true}
+	FALSE          = &object.Boolean{Value: false}
+	CONTINUE_VALUE = &object.ContinueValue{}
+	BREAK_VALUE    = &object.BreakValue{}
 )
 
 func isError(obj object.Object) bool {
@@ -61,6 +63,15 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.IfStatement:
 		return evalIfStatement(node, env)
+
+	case *ast.WhileStatement:
+		return evalWhileStatement(node, env)
+
+	case *ast.ContinueStatement:
+		return CONTINUE_VALUE
+
+	case *ast.BreakStatement:
+		return BREAK_VALUE
 
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
@@ -168,10 +179,15 @@ func evalBlockStatements(block *ast.BlockStatement, env *object.Environment) obj
 	for _, statement := range block.Statements {
 		result = Eval(statement, blockEnv)
 
-		if result != nil {
-			if result.TypeIs(object.RETURN_VALUE_OBJ) || result.TypeIs(object.ERROR_OBJ) {
-				return result
-			}
+		in := object.TypeIn(
+			result,
+			object.RETURN_VALUE_OBJ,
+			object.ERROR_OBJ,
+			object.CONTINUE_VALUE_OBJ,
+			object.BREAK_VALUE_OBJ,
+		)
+		if in {
+			return result
 		}
 	}
 
@@ -194,6 +210,25 @@ func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object
 	} else {
 		return NULL
 	}
+}
+
+func evalWhileStatement(ws *ast.WhileStatement, env *object.Environment) object.Object {
+	for {
+		condition := Eval(ws.Condition, env)
+		if isTruthy(condition) {
+			encolosedEnv := object.NewEnclosedEnvironment(env)
+			val := Eval(ws.Body, encolosedEnv)
+			switch val.(type) {
+			case *object.ReturnValue, *object.Error:
+				return val
+			case *object.BreakValue:
+				return NULL
+			}
+		} else {
+			break
+		}
+	}
+	return NULL
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {

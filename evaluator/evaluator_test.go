@@ -19,6 +19,78 @@ func testEval(t *testing.T, input string) object.Object {
 	return Eval(program, env)
 }
 
+func TestWhileStatements(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{`
+var a = 0;
+var n = 5;
+while (n > 0) {
+a = a + n
+n = n - 1
+}
+a`, 15},
+		{`
+var a = 0;
+var n = 5;
+while (n > 0) {
+if (n % 2 == 0) {
+ a = a + n
+}
+n = n - 1
+}
+a`, 6},
+		{`
+var a = 0;
+var n = 5;
+while (n > 0) {
+if (n % 2 != 0) {
+   n = n - 1
+   continue
+}
+ a = a + n
+n = n - 1
+}
+a`, 6},
+		{`
+		var a = 0;
+		var n = 5;
+		while (n > 0) {
+			if (not(n % 2)) {
+			 break
+			}
+			a = a + n
+			n = n - 1
+		}
+		a`,
+			5},
+		{`
+		var a = 0;
+		var n = 5;
+		while (1) {
+			if (n < 0) {
+				break
+			}
+			if (n % 2 == 0) {
+				n = n - 1
+				continue
+				break
+			}
+			a = a + n
+			n = n - 1
+		}
+		a`,
+			9},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(t, tt.input)
+		testIntegerObject(t, evaluated, tt.expected)
+	}
+}
+
 func TestEnclosedEnvironment(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -439,6 +511,10 @@ if (1) {
     }
   }
 }`,
+			"undefined: 'a'",
+		},
+		{
+			`while (1) {a}`,
 			"undefined: 'a'",
 		},
 	}
