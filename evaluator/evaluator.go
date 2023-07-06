@@ -470,7 +470,7 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 	if builtin, ok := builtins[node.Value]; ok {
 		return builtin
 	}
-	return object.NewError("identifier not found: '%s'", node.Value)
+	return object.NewError("undefined: '%s'", node.Value)
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {

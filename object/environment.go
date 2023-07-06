@@ -8,25 +8,23 @@ func NewEnclosedEnvironment(outer *Environment) *Environment {
 
 func NewEnvironment() *Environment {
 	s := make(map[string]Object)
-	c := make(map[string]bool)
-	return &Environment{store: s, constants: c, outer: nil}
+	p := make(map[string]bool)
+	return &Environment{store: s, propertys: p, outer: nil}
 }
 
 type Environment struct {
 	store map[string]Object
-	// constants 保存声明为常量的名字
-	constants map[string]bool
+	// propertys 保存声明是否是常量
+	propertys map[string]bool
 	outer     *Environment
 }
 
-func (e *Environment) Add(name string, val Object, isConstant bool) Object {
+func (e *Environment) Add(name string, val Object, constant bool) Object {
 	if _, ok := e.store[name]; ok {
 		return NewError("variable name '%s' redeclared in this block", name)
 	}
 	e.store[name] = val
-	if isConstant {
-		e.constants[name] = true
-	}
+	e.propertys[name] = constant
 	return val
 }
 
@@ -39,16 +37,21 @@ func (e *Environment) Get(name string) (Object, bool) {
 }
 
 func (e *Environment) isConstant(name string) bool {
-	if _, ok := e.constants[name]; ok {
-		return true
-	}
-	if e.outer != nil {
-		return e.outer.isConstant(name)
+	if constant, ok := e.propertys[name]; ok {
+		return constant
 	}
 	return false
 }
 
 func (e *Environment) Set(name string, val Object) Object {
+	_, ok := e.store[name]
+	if !ok {
+		// 找不到，去上层环境设置
+		if e.outer != nil {
+			return e.outer.Set(name, val)
+		}
+		return NewError("undefined: '%s'", name)
+	}
 	if e.isConstant(name) {
 		return NewError("cannot assign to constant: '%s'", name)
 	}

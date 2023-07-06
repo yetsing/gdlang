@@ -37,6 +37,14 @@ func TestEnclosedEnvironment(t *testing.T) {
 				b`,
 			10,
 		},
+		{`
+var a = 10
+if (a > 5) {
+  a = 20
+}
+a`,
+			20,
+		},
 	}
 
 	for _, tt := range tests {
@@ -380,7 +388,7 @@ if (10 > 1) {
 		},
 		{
 			"foobar",
-			"identifier not found: 'foobar'",
+			"undefined: 'foobar'",
 		},
 		{
 			"var foo = fn(){}; foo(1);",
@@ -421,6 +429,17 @@ if (10 > 1) {
 		{
 			`var a = 1; var a = 1`,
 			"variable name 'a' redeclared in this block",
+		},
+		{
+			`
+if (1) {
+  if (2) {
+    if (3) {
+       a = 1
+    }
+  }
+}`,
+			"undefined: 'a'",
 		},
 	}
 
