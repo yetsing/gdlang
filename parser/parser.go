@@ -23,6 +23,22 @@ type Parser struct {
 	lines     []string
 	// parenCount 进入的括号数量，用于判断当前解析是否在括号内
 	parenCount int
+	// whileStack while 层级栈，用来检查 continue break 是否 while 块中
+	// 之所以用栈，而不是用整数，是因为有下面这种情况， while 里面套函数定义
+	// while (1) {
+	//   var foo = fn() {
+	//     continue
+	//   }
+	// }
+	// 上面这种是非法的，但是下面这种是合法的
+	// while (1) {
+	//   var foo = fn() {
+	//     while (2) {
+	//       continue
+	//     }
+	//   }
+	// }
+	whileStack []int
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -31,6 +47,7 @@ func New(l *lexer.Lexer) *Parser {
 		filename:   l.Filename,
 		lines:      l.GetLines(),
 		parenCount: 0,
+		whileStack: []int{0},
 	}
 	// 填充 currToken 和 peekToken
 	p.nextToken()
@@ -386,10 +403,12 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.whileStack[len(p.whileStack)-1]++
 	body, err := p.blockStatement()
 	if err != nil {
 		return nil, err
 	}
+	p.whileStack[len(p.whileStack)-1]--
 	// 这些判断用来保证不会有这种写法————语句紧跟在 } 后面，如下所示
 	// while(1) {}var a = 1
 	err = p.eatIn(token.NEWLINE, token.EOF)
@@ -406,6 +425,9 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 
 // continue_statement ::= "continue" (";" | NEWLINE)
 func (p *Parser) continueStatement() (*ast.ContinueStatement, error) {
+	if p.whileStack[len(p.whileStack)-1] == 0 {
+		return nil, p.syntaxError("continue is not in a loop")
+	}
 	tok := p.currToken
 	err := p.eat(token.CONTINUE)
 	if err != nil {
@@ -420,6 +442,9 @@ func (p *Parser) continueStatement() (*ast.ContinueStatement, error) {
 
 // break_statement ::= "break" (";" | NEWLINE)
 func (p *Parser) breakStatement() (*ast.BreakStatement, error) {
+	if p.whileStack[len(p.whileStack)-1] == 0 {
+		return nil, p.syntaxError("break is not in a loop")
+	}
 	tok := p.currToken
 	err := p.eat(token.BREAK)
 	if err != nil {
@@ -1030,10 +1055,12 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.whileStack = append(p.whileStack, 0)
 	block, err := p.blockStatement()
 	if err != nil {
 		return nil, err
 	}
+	p.whileStack = p.whileStack[:len(p.whileStack)-1]
 	fl := &ast.FunctionLiteral{
 		Token:      tok,
 		Parameters: paramters,

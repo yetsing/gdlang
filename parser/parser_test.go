@@ -581,6 +581,36 @@ func TestWhileStatements(t *testing.T) {
 	if breakStmt.TokenLiteral() != "break" {
 		t.Fatalf("expected break, but got=%q", breakStmt.TokenLiteral())
 	}
+
+	input = `
+while (1) {
+  con foo = fn(){
+    while (2) {break}
+  }
+  break
+}
+`
+	l = lexer.New(input)
+	p = New(l)
+	program, err = p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	input = `
+while (1) {
+  continue
+  con foo = fn(){
+    while (2) {continue}
+  }
+}
+`
+	l = lexer.New(input)
+	p = New(l)
+	program, err = p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 }
 
 func TestParsingBinaryOpExpressions(t *testing.T) {
@@ -1424,6 +1454,24 @@ func TestSyntaxError(t *testing.T) {
 		{"if(a) {a} var b = 2"},
 		{"if(a) {a} else {} var b = 2"},
 		{"while(a) {a} var b = 2"},
+		{"continue"},
+		{"break"},
+		{"var a = 1; break; a = 2"},
+		{"var a = 1; continue; a = 2"},
+		{`
+while (1) {
+  var foo = fn() {
+    continue
+  }
+}
+`},
+		{`
+while (1) {
+  var foo = fn() {
+    break
+  }
+}
+`},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -1432,7 +1480,7 @@ func TestSyntaxError(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		//t.Logf("%v", err)
+		t.Logf("%v", err)
 	}
 }
 
