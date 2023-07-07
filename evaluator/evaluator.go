@@ -494,13 +494,21 @@ func evalStringBinaryOpExpression(
 	operator string,
 	left, right object.Object,
 ) object.Object {
-	if operator != "+" {
-		return object.NewError("unsupported operand type for %s: 'str' and 'str'", operator)
-	}
-
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
-	return object.NewString(leftVal + rightVal)
+	switch operator {
+	case "+":
+		return object.NewString(leftVal + rightVal)
+
+	case "==":
+		return nativeBoolToBooleanObject(leftVal == rightVal)
+
+	case "!=":
+		return nativeBoolToBooleanObject(leftVal != rightVal)
+
+	default:
+		return object.NewError("unsupported operand type for %s: 'str' and 'str'", operator)
+	}
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {

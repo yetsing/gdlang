@@ -52,6 +52,11 @@ func Start(in io.Reader, out io.Writer) {
 				continue
 			}
 
+			// 值为 null 不输出
+			if evaluated == evaluator.NULL {
+				continue
+			}
+
 			if _, err := io.WriteString(out, evaluated.String()); err != nil {
 				fmt.Println(err)
 			}

@@ -308,6 +308,15 @@ func TestEvalBooleanExpression(t *testing.T) {
 		{"(1 < 2) == false", false},
 		{"(1 > 2) == true", false},
 		{"(1 > 2) == false", true},
+
+		{"'' == ``", true},
+		{`'' == ""`, true},
+		{"'abcd' == `abcd`", true},
+		{`'中文' == "中文"`, true},
+		{`"中文" == "中文"`, true},
+		{`"中文a" == "中文"`, false},
+		{`"中文a" != "中文"`, true},
+		{`"中文" != "中文"`, false},
 	}
 
 	for _, tt := range tests {
@@ -664,16 +673,49 @@ func TestBuiltinFunctions(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected interface{}
+		isError  bool
 	}{
-		{`len("")`, 0},
-		{`len("four")`, 4},
-		{`len("hello world")`, 11},
-		{`len(1)`, "object of type 'int' has no len()"},
-		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
-		{`len([])`, 0},
-		{`len([1 + 1])`, 1},
-		{`len(["one", "two"])`, 2},
-		{`len(["one", "two",])`, 2},
+		{`abs(1)`, 1, false},
+		{`abs(-1)`, 1, false},
+		{`abs(-1, 2)`, "wrong number of arguments. got=2, want=1", true},
+		{`abs('')`, "wrong argument type for abs(): 'str'", true},
+
+		{`bin(3) == "0b11"`, true, false},
+		{`bin(-10) == "-0b1010"`, true, false},
+		{`bin(0)`, "0b0", false},
+		{`bin(0, 0) == "0b0"`, "wrong number of arguments. got=2, want=1", true},
+		{`bin("")`, "wrong argument type for bin(): 'str'", true},
+		{`bin([])`, "wrong argument type for bin(): 'list'", true},
+
+		{`len("")`, 0, false},
+		{`len("four")`, 4, false},
+		{`len("hello world")`, 11, false},
+		{`len(1)`, "wrong argument type for len(): 'int'", true},
+		{`len("one", "two")`, "wrong number of arguments. got=2, want=1", true},
+		{`len([])`, 0, false},
+		{`len([1 + 1])`, 1, false},
+		{`len(["one", "two"])`, 2, false},
+		{`len(["one", "two",])`, 2, false},
+
+		{`hex(255)`, "0xff", false},
+		{`hex(-42)`, "-0x2a", false},
+		{`hex(0x1234)`, "0x1234", false},
+		{`hex(0x1234, 1)`, "wrong number of arguments. got=2, want=1", true},
+		{`hex('')`, "wrong argument type for hex(): 'str'", true},
+
+		{`oct(8)`, "0o10", false},
+		{`oct(-56)`, "-0o70", false},
+		{`oct(0o1234)`, "0o1234", false},
+		{`oct(0o1234, 1)`, "wrong number of arguments. got=2, want=1", true},
+		{`oct('')`, "wrong argument type for oct(): 'str'", true},
+
+		{`print()`, NULL, false},
+		{`print(1, -1, "abc", true, false, null, [], {})`, NULL, false},
+
+		{`type(1) == "str"`, false, false},
+		{`type('') == "str"`, true, false},
+		{`type([])`, "list", false},
+		{`type({})`, "dict", false},
 	}
 
 	for _, tt := range tests {
@@ -683,16 +725,33 @@ func TestBuiltinFunctions(t *testing.T) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
 		case string:
-			errObj, ok := evaluated.(*object.Error)
-			if !ok {
-				t.Errorf("object is not Error. got=%T (%+v)",
-					evaluated, evaluated)
-				continue
+			if tt.isError {
+				errObj, ok := evaluated.(*object.Error)
+				if !ok {
+					t.Errorf("object is not Error. got=%T (%+v)",
+						evaluated, evaluated)
+					continue
+				}
+				if errObj.Message != expected {
+					t.Errorf("wrong error message. expected=%q, got=%q",
+						expected, errObj.Message)
+				}
+			} else {
+				strObj, ok := evaluated.(*object.String)
+				if !ok {
+					t.Errorf("object is not string. got=%T (%+v)",
+						evaluated, evaluated)
+					continue
+				}
+				if strObj.Value != expected {
+					t.Errorf("wrong string value. expected=%q, got=%q",
+						expected, strObj.Value)
+				}
 			}
-			if errObj.Message != expected {
-				t.Errorf("wrong error message. expected=%q, got=%q",
-					expected, errObj.Message)
-			}
+		case bool:
+			testBooleanObject(t, evaluated, expected)
+		case *object.Null:
+			testNullObject(t, evaluated)
 		}
 	}
 }
