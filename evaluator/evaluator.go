@@ -132,7 +132,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
-		return &object.List{Elements: elements}
+		return object.NewList(elements)
 
 	case *ast.FunctionLiteral:
 		return object.NewFunction(node, env)
@@ -141,10 +141,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIdentifier(node, env)
 
 	case *ast.StringLiteral:
-		return &object.String{Value: node.Value}
+		return object.NewString(node.Value)
 
 	case *ast.IntegerLiteral:
-		return &object.Integer{Value: node.Value}
+		return object.NewInteger(node.Value)
 
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
@@ -347,7 +347,7 @@ func evalDictLiteral(node *ast.DictLiteral, env *object.Environment) object.Obje
 			Value: value,
 		}
 	}
-	return &object.Dict{Pairs: pairs}
+	return object.NewDict(pairs)
 }
 
 func isTruthy(obj object.Object) bool {
@@ -362,6 +362,12 @@ func isTruthy(obj object.Object) bool {
 		switch obj := obj.(type) {
 		case *object.Integer:
 			return obj.Value != 0
+		case *object.String:
+			return len(obj.Value) != 0
+		case *object.List:
+			return len(obj.Elements) != 0
+		case *object.Dict:
+			return len(obj.Pairs) != 0
 		}
 		return true
 	}
@@ -393,7 +399,7 @@ func evalMinusUnaryOperatorExpression(right object.Object) object.Object {
 	}
 
 	value := right.(*object.Integer).Value
-	return &object.Integer{Value: -value}
+	return object.NewInteger(-value)
 }
 
 func evalPlusUnaryOperatorExpression(right object.Object) object.Object {
@@ -403,7 +409,7 @@ func evalPlusUnaryOperatorExpression(right object.Object) object.Object {
 	}
 
 	value := right.(*object.Integer).Value
-	return &object.Integer{Value: value}
+	return object.NewInteger(value)
 }
 
 func evalBitwiseNotOperatorExpression(right object.Object) object.Object {
@@ -413,7 +419,7 @@ func evalBitwiseNotOperatorExpression(right object.Object) object.Object {
 	}
 
 	value := right.(*object.Integer).Value
-	return &object.Integer{Value: ^value}
+	return object.NewInteger(^value)
 }
 
 func evalBinaryOpExpression(
@@ -446,25 +452,25 @@ func evalIntegerBinaryOpExpression(
 
 	switch operator {
 	case "+":
-		return &object.Integer{Value: leftVal + rightVal}
+		return object.NewInteger(leftVal + rightVal)
 	case "-":
-		return &object.Integer{Value: leftVal - rightVal}
+		return object.NewInteger(leftVal - rightVal)
 	case "*":
-		return &object.Integer{Value: leftVal * rightVal}
+		return object.NewInteger(leftVal * rightVal)
 	case "/":
-		return &object.Integer{Value: leftVal / rightVal}
+		return object.NewInteger(leftVal / rightVal)
 	case "%":
-		return &object.Integer{Value: leftVal % rightVal}
+		return object.NewInteger(leftVal % rightVal)
 	case ">>":
-		return &object.Integer{Value: leftVal >> rightVal}
+		return object.NewInteger(leftVal >> rightVal)
 	case "<<":
-		return &object.Integer{Value: leftVal << rightVal}
+		return object.NewInteger(leftVal << rightVal)
 	case "&":
-		return &object.Integer{Value: leftVal & rightVal}
+		return object.NewInteger(leftVal & rightVal)
 	case "^":
-		return &object.Integer{Value: leftVal ^ rightVal}
+		return object.NewInteger(leftVal ^ rightVal)
 	case "|":
-		return &object.Integer{Value: leftVal | rightVal}
+		return object.NewInteger(leftVal | rightVal)
 	case "<":
 		return nativeBoolToBooleanObject(leftVal < rightVal)
 	case "<=":
@@ -494,7 +500,7 @@ func evalStringBinaryOpExpression(
 
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
-	return &object.String{Value: leftVal + rightVal}
+	return object.NewString(leftVal + rightVal)
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {

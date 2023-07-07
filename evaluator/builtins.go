@@ -4,6 +4,7 @@ import "weilang/object"
 
 var builtins = map[string]*object.Builtin{
 	"len": &object.Builtin{
+		Name: "len",
 		Fn: func(args ...object.Object) object.Object {
 			if len(args) != 1 {
 				return object.NewError("wrong number of arguments. got=%d, want=1", len(args))

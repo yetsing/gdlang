@@ -83,6 +83,22 @@ a`, 6},
 		}
 		a`,
 			9},
+		{`
+		var a = 0;
+		var n = 5;
+		while (1) {
+			if (n < 0) {
+				break
+			}
+			while (n % 2 == 0) {
+				n = n - 1
+				break
+			}
+			a = a + n
+			n = n - 1
+		}
+		a`,
+			8},
 	}
 
 	for _, tt := range tests {
@@ -372,6 +388,86 @@ func TestIfElseStatements(t *testing.T) {
 		{"if (1 < 2) { 10 } else if (2 < 3) { 20 } else {10}", 10},
 		{"if (2 < 2) { 10 } else if (2 < 3) { 20 } else {30}", 20},
 		{"if (2 < 2) { 10 } else if (3 < 3) { 20 } else {30}", 30},
+		{`
+var a = 5; 
+if ("abc") {
+  a = 30
+}
+a`,
+			30,
+		},
+		{`
+var a = 5; 
+if ("") {
+  a = 30
+}
+a`,
+			5,
+		},
+		{`
+var a = 5; 
+if (123) {
+  a = 30
+}
+a`,
+			30,
+		},
+		{`
+var a = 5; 
+if (0) {
+  a = 30
+}
+a`,
+			5,
+		},
+		{`
+var a = 5; 
+if ([1]) {
+  a = 30
+}
+a`,
+			30,
+		},
+		{`
+var a = 5; 
+if ([]) {
+  a = 30
+}
+a`,
+			5,
+		},
+		{`
+var a = 5; 
+if ({1:1}) {
+  a = 30
+}
+a`,
+			30,
+		},
+		{`
+var a = 5; 
+if ({}) {
+  a = 30
+}
+a`,
+			5,
+		},
+		{`
+var a = 5; 
+if (not null) {
+  a = 30
+}
+a`,
+			30,
+		},
+		{`
+var a = 5; 
+if (null) {
+  a = 30
+}
+a`,
+			5,
+		},
 	}
 
 	for _, tt := range tests {
