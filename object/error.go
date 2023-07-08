@@ -10,6 +10,31 @@ func NewError(format string, a ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, a...)}
 }
 
+func WrongNumberArgument(got, want int) *Error {
+	return NewError("wrong number of arguments. got=%d, want=%d", got, want)
+}
+
+func WrongNumberArgument2(got, min, max int) *Error {
+	return NewError("wrong number of arguments. got=%d, want=%d-%d", got, min, max)
+}
+
+func wrongArgumentType(got ObjectType) *Error {
+	return NewError("wrong argument type: '%s'", got)
+}
+
+func wrongArgumentTypeAt(got ObjectType, at int) *Error {
+	return NewError("wrong argument type: '%s' at %d", got, at)
+}
+
+func attributeError(otype, name string) *Error {
+	return NewError("'%s' object has not attribute '%s'", otype, name)
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func RuntimeError(msg string) *Error {
+	return NewError("runtime error: %s", msg)
+}
+
 func (e *Error) Type() ObjectType {
 	return ERROR_OBJ
 }

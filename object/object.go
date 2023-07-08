@@ -5,18 +5,20 @@ import "fmt"
 type ObjectType string
 
 const (
-	INTEGER_OBJ        = "int"
-	BOOLEAN_OBJ        = "bool"
-	NULL_OBJ           = "null"
-	ERROR_OBJ          = "error"
-	RETURN_VALUE_OBJ   = "return_value"
-	FUNCTION_OBJ       = "function"
-	STRING_OBJ         = "str"
-	BUILTIN_OBJ        = "builtin"
-	LIST_OBJ           = "list"
-	DICT_OBJ           = "dict"
-	CONTINUE_VALUE_OBJ = "continue_value"
-	BREAK_VALUE_OBJ    = "break_value"
+	INTEGER_OBJ              = "int"
+	BOOLEAN_OBJ              = "bool"
+	NULL_OBJ                 = "null"
+	ERROR_OBJ                = "error"
+	RETURN_VALUE_OBJ         = "return_value"
+	FUNCTION_OBJ             = "function"
+	STRING_OBJ               = "str"
+	BUILTIN_OBJ              = "builtin"
+	LIST_OBJ                 = "list"
+	DICT_OBJ                 = "dict"
+	CONTINUE_VALUE_OBJ       = "continue_value"
+	BREAK_VALUE_OBJ          = "break_value"
+	BUILTIN_METHOD_OBJ       = "builtin_method"
+	BOUND_BUILTIN_METHOD_OBJ = "bound_builtin_method"
 )
 
 type Object interface {
@@ -81,6 +83,52 @@ func (b *Builtin) String() string {
 	return fmt.Sprintf("<builtin function %s>", b.Name)
 }
 
+type BuiltinMethodFunction func(obj Object, args ...Object) Object
+
+type BuiltinMethod struct {
+	ctype ObjectType
+	name  string
+	Fn    BuiltinMethodFunction
+}
+
+func (b *BuiltinMethod) Type() ObjectType {
+	return BUILTIN_METHOD_OBJ
+}
+
+func (b *BuiltinMethod) TypeIs(objectType ObjectType) bool {
+	return b.Type() == objectType
+}
+
+func (b *BuiltinMethod) TypeNotIs(objectType ObjectType) bool {
+	return b.Type() != objectType
+}
+
+func (b *BuiltinMethod) String() string {
+	return fmt.Sprintf("<builtin method %s of %s object>", b.name, b.ctype)
+}
+
+// BoundBuiltinMethod 绑定了实例变量的内置方法
+type BoundBuiltinMethod struct {
+	*BuiltinMethod
+	This Object
+}
+
+func (b *BoundBuiltinMethod) Type() ObjectType {
+	return BOUND_BUILTIN_METHOD_OBJ
+}
+
+func (b *BoundBuiltinMethod) TypeIs(objectType ObjectType) bool {
+	return b.Type() == objectType
+}
+
+func (b *BoundBuiltinMethod) TypeNotIs(objectType ObjectType) bool {
+	return b.Type() != objectType
+}
+
+func (b *BoundBuiltinMethod) String() string {
+	return fmt.Sprintf("<bound builtin method %s of %s object>", b.name, b.ctype)
+}
+
 type Hashable interface {
 	HashKey() HashKey
 }
@@ -90,9 +138,37 @@ type HashKey struct {
 	Value uint64
 }
 
-//==========================
+type Attributable interface {
+	GetAttribute(name string) Object
+}
+
+type attributeStore struct {
+	attribute map[string]Object
+}
+
+func (a *attributeStore) get(object Object, name string) Object {
+	val, ok := a.attribute[name]
+	if ok {
+		switch rval := val.(type) {
+		case *BuiltinMethod:
+			return &BoundBuiltinMethod{
+				BuiltinMethod: rval,
+				This:          object,
+			}
+		default:
+			return rval
+		}
+	}
+	return nil
+}
+
+// ==========================
 // 两个特殊值，用于处理 continue break 语句
-//==========================
+// ==========================
+var (
+	CONTINUE_VALUE = &ContinueValue{}
+	BREAK_VALUE    = &BreakValue{}
+)
 
 type ContinueValue struct {
 }

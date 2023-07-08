@@ -2,24 +2,10 @@ package evaluator
 
 import (
 	"fmt"
+	"github.com/thinkeridea/go-extend/exunicode/exutf8"
 	"weilang/ast"
 	"weilang/object"
 )
-
-var (
-	NULL           = &object.Null{}
-	TRUE           = &object.Boolean{Value: true}
-	FALSE          = &object.Boolean{Value: false}
-	CONTINUE_VALUE = &object.ContinueValue{}
-	BREAK_VALUE    = &object.BreakValue{}
-)
-
-func isError(obj object.Object) bool {
-	if obj != nil {
-		return obj.TypeIs(object.ERROR_OBJ)
-	}
-	return false
-}
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
@@ -68,10 +54,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalWhileStatement(node, env)
 
 	case *ast.ContinueStatement:
-		return CONTINUE_VALUE
+		return object.CONTINUE_VALUE
 
 	case *ast.BreakStatement:
-		return BREAK_VALUE
+		return object.BREAK_VALUE
 
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
@@ -124,6 +110,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return evalSubscriptionExpression(left, index)
 
+	case *ast.AttributeExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		return evalAttributeExpression(left, node.Attribute.Value)
+
 	case *ast.DictLiteral:
 		return evalDictLiteral(node, env)
 
@@ -147,10 +140,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return object.NewInteger(node.Value)
 
 	case *ast.Boolean:
-		return nativeBoolToBooleanObject(node.Value)
+		return object.NativeBoolToBooleanObject(node.Value)
 
 	case *ast.NullLiteral:
-		return NULL
+		return object.NULL
 	}
 
 	return nil
@@ -208,7 +201,7 @@ func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object
 	if is.ElseBody != nil {
 		return Eval(is.ElseBody, env)
 	} else {
-		return NULL
+		return object.NULL
 	}
 }
 
@@ -222,13 +215,13 @@ func evalWhileStatement(ws *ast.WhileStatement, env *object.Environment) object.
 			case *object.ReturnValue, *object.Error:
 				return val
 			case *object.BreakValue:
-				return NULL
+				return object.NULL
 			}
 		} else {
 			break
 		}
 	}
-	return NULL
+	return object.NULL
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
@@ -245,16 +238,11 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		return unwrapReturnValue(evaluated)
 	case *object.Builtin:
 		return fn.Fn(args...)
+	case *object.BoundBuiltinMethod:
+		return fn.Fn(fn.This, args...)
 	default:
 		return object.NewError("not a function: '%s'", fn.Type())
 	}
-}
-
-func unwrapReturnValue(obj object.Object) object.Object {
-	if returnValue, ok := obj.(*object.ReturnValue); ok {
-		return returnValue.Value
-	}
-	return NULL
 }
 
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
@@ -273,6 +261,8 @@ func evalSubscriptionExpression(left, index object.Object) object.Object {
 		return evalListSubscriptionExpression(left, index)
 	case left.TypeIs(object.DICT_OBJ):
 		return evalDictSubscriptionExpression(left, index)
+	case left.TypeIs(object.STRING_OBJ):
+		return evalStringSubscriptionExpression(left, index)
 	default:
 		return object.NewError("'%s' object is not subscriptable", left.Type())
 	}
@@ -306,6 +296,26 @@ func evalDictSubscriptionExpression(dict, index object.Object) object.Object {
 		return object.NewError("key '%s' does not exist", index.String())
 	}
 	return pair.Value
+}
+
+func evalStringSubscriptionExpression(s, index object.Object) object.Object {
+	if index.TypeNotIs(object.INTEGER_OBJ) {
+		return object.NewError("string index must be integer")
+	}
+
+	idx := int(index.(*object.Integer).Value)
+	strObj := s.(*object.String)
+	length := strObj.Length
+	if idx < 0 {
+		idx += length
+	}
+
+	if idx < 0 || idx > length-1 {
+		return object.NewError("string index out of range")
+	}
+
+	si := exutf8.RuneSubString(strObj.Value, idx, 1)
+	return object.NewString(si)
 }
 
 func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
@@ -350,29 +360,6 @@ func evalDictLiteral(node *ast.DictLiteral, env *object.Environment) object.Obje
 	return object.NewDict(pairs)
 }
 
-func isTruthy(obj object.Object) bool {
-	switch obj {
-	case TRUE:
-		return true
-	case FALSE:
-		return false
-	case NULL:
-		return false
-	default:
-		switch obj := obj.(type) {
-		case *object.Integer:
-			return obj.Value != 0
-		case *object.String:
-			return len(obj.Value) != 0
-		case *object.List:
-			return len(obj.Elements) != 0
-		case *object.Dict:
-			return len(obj.Pairs) != 0
-		}
-		return true
-	}
-}
-
 func evalUnaryExpression(operator string, right object.Object) object.Object {
 	switch operator {
 	case "not":
@@ -389,7 +376,7 @@ func evalUnaryExpression(operator string, right object.Object) object.Object {
 }
 
 func evalNotOperatorExpression(operand object.Object) object.Object {
-	return nativeBoolToBooleanObject(!isTruthy(operand))
+	return object.NativeBoolToBooleanObject(!isTruthy(operand))
 }
 
 func evalMinusUnaryOperatorExpression(right object.Object) object.Object {
@@ -433,9 +420,9 @@ func evalBinaryOpExpression(
 		return evalStringBinaryOpExpression(operator, left, right)
 
 	case operator == "==":
-		return nativeBoolToBooleanObject(left == right)
+		return object.NativeBoolToBooleanObject(left == right)
 	case operator == "!=":
-		return nativeBoolToBooleanObject(left != right)
+		return object.NativeBoolToBooleanObject(left != right)
 	default:
 		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
@@ -472,17 +459,17 @@ func evalIntegerBinaryOpExpression(
 	case "|":
 		return object.NewInteger(leftVal | rightVal)
 	case "<":
-		return nativeBoolToBooleanObject(leftVal < rightVal)
+		return object.NativeBoolToBooleanObject(leftVal < rightVal)
 	case "<=":
-		return nativeBoolToBooleanObject(leftVal <= rightVal)
+		return object.NativeBoolToBooleanObject(leftVal <= rightVal)
 	case ">":
-		return nativeBoolToBooleanObject(leftVal > rightVal)
+		return object.NativeBoolToBooleanObject(leftVal > rightVal)
 	case ">=":
-		return nativeBoolToBooleanObject(leftVal >= rightVal)
+		return object.NativeBoolToBooleanObject(leftVal >= rightVal)
 	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
+		return object.NativeBoolToBooleanObject(leftVal == rightVal)
 	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
+		return object.NativeBoolToBooleanObject(leftVal != rightVal)
 	default:
 		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
@@ -501,10 +488,10 @@ func evalStringBinaryOpExpression(
 		return object.NewString(leftVal + rightVal)
 
 	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
+		return object.NativeBoolToBooleanObject(leftVal == rightVal)
 
 	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
+		return object.NativeBoolToBooleanObject(leftVal != rightVal)
 
 	default:
 		return object.NewError("unsupported operand type for %s: 'str' and 'str'", operator)
@@ -522,9 +509,11 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 	return object.NewError("undefined: '%s'", node.Value)
 }
 
-func nativeBoolToBooleanObject(input bool) *object.Boolean {
-	if input {
-		return TRUE
+func evalAttributeExpression(left object.Object, name string) object.Object {
+	leftAttr, ok := left.(object.Attributable)
+	if !ok {
+		return object.NewError("'%s' object has not attribute '%s'", left.Type(), name)
 	}
-	return FALSE
+
+	return leftAttr.GetAttribute(name)
 }

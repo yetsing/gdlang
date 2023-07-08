@@ -53,7 +53,7 @@ func Start(in io.Reader, out io.Writer) {
 			}
 
 			// 值为 null 不输出
-			if evaluated == evaluator.NULL {
+			if evaluated == object.NULL {
 				continue
 			}
 

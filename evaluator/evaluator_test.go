@@ -688,6 +688,8 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`bin([])`, "wrong argument type for bin(): 'list'", true},
 
 		{`len("")`, 0, false},
+		{`len("中文")`, 2, false},
+		{`len("a中文")`, 3, false},
 		{`len("four")`, 4, false},
 		{`len("hello world")`, 11, false},
 		{`len(1)`, "wrong argument type for len(): 'int'", true},
@@ -709,8 +711,8 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`oct(0o1234, 1)`, "wrong number of arguments. got=2, want=1", true},
 		{`oct('')`, "wrong argument type for oct(): 'str'", true},
 
-		{`print()`, NULL, false},
-		{`print(1, -1, "abc", true, false, null, [], {})`, NULL, false},
+		{`print()`, object.NULL, false},
+		{`print(1, -1, "abc", true, false, null, [], {})`, object.NULL, false},
 
 		{`type(1) == "str"`, false, false},
 		{`type('') == "str"`, true, false},
@@ -779,53 +781,113 @@ func TestListSubscriptionExpressions(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected interface{}
+		isError  bool
 	}{
 		{
 			"[1, 2, 3][0]",
 			1,
+			false,
 		},
 		{
 			"[1, 2, 3][1]",
 			2,
+			false,
 		},
 		{
 			"[1, 2, 3][2]",
 			3,
+			false,
 		},
 		{
 			"var i = 0; [1][i];",
 			1,
+			false,
 		},
 		{
 			"[1, 2, 3][1 + 1];",
 			3,
+			false,
 		},
 		{
 			"var myArray = [1, 2, 3]; myArray[2];",
 			3,
+			false,
 		},
 		{
 			"var myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
 			6,
+			false,
 		},
 		{
 			"var myArray = [1, 2, 3]; var i = myArray[0]; myArray[i]",
 			2,
+			false,
 		},
 
 		{
 			"[1, 2, 3][-1]",
 			3,
+			false,
+		},
+
+		{
+			"[1, 2, 3][3]",
+			"list index out of range",
+			true,
+		},
+
+		{
+			`"abc"[0]`,
+			"a",
+			false,
+		},
+		{
+			`"中文"[0]`,
+			"中",
+			false,
+		},
+		{
+			`"a中文"[1]`,
+			"中",
+			false,
+		},
+		{
+			`"中文"[1]`,
+			"文",
+			false,
+		},
+		{
+			`"中文"[2]`,
+			"string index out of range",
+			true,
 		},
 	}
 
 	for _, tt := range tests {
 		evaluated := testEval(t, tt.input)
-		integer, ok := tt.expected.(int)
-		if ok {
-			testIntegerObject(t, evaluated, int64(integer))
-		} else {
-			testNullObject(t, evaluated)
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, evaluated, int64(expected))
+		case string:
+			if tt.isError {
+				errObj, ok := evaluated.(*object.Error)
+				if !ok {
+					t.Errorf("expected a error. got=%T (%+v)", evaluated, evaluated)
+					continue
+				}
+				if errObj.Message != expected {
+					t.Errorf("expected error msg. expected=%q, got=%q", errObj.Message, expected)
+				}
+			} else {
+				strObj, ok := evaluated.(*object.String)
+				if !ok {
+					t.Errorf("expected string. got=%T (%+v)", evaluated, evaluated)
+					continue
+				}
+				if strObj.Value != expected {
+					t.Errorf("expected string. expected=%q, got=%q", strObj.Value, expected)
+				}
+			}
 		}
 	}
 }
@@ -852,8 +914,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: "two"}).HashKey():   2,
 		(&object.String{Value: "three"}).HashKey(): 3,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		TRUE.HashKey():                             5,
-		FALSE.HashKey():                            6,
+		object.TRUE.HashKey():                      5,
+		object.FALSE.HashKey():                     6,
 	}
 
 	if len(result.Pairs) != len(expected) {
@@ -911,7 +973,7 @@ func TestHashIndexExpressions(t *testing.T) {
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
-	if obj != NULL {
+	if obj != object.NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
 		return false
 	}
@@ -935,6 +997,7 @@ func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
 }
 
 func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
+	t.Helper()
 	result, ok := obj.(*object.Boolean)
 	if !ok {
 		t.Errorf("object is not Boolean. got=%T (%+v)", obj, obj)
@@ -942,6 +1005,21 @@ func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
 	}
 	if result.Value != expected {
 		t.Errorf("object has wrong value. got=%t, want=%t",
+			result.Value, expected)
+		return false
+	}
+	return true
+}
+
+func testStringObject(t *testing.T, obj object.Object, expected string) bool {
+	t.Helper()
+	result, ok := obj.(*object.String)
+	if !ok {
+		t.Errorf("object is not String. got=%T (%+v)", obj, obj)
+		return false
+	}
+	if result.Value != expected {
+		t.Errorf("object has wrong value. got=%q, want=%q",
 			result.Value, expected)
 		return false
 	}
