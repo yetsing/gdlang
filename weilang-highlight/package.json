@@ -1,0 +1,25 @@
+{
+  "name": "weilang-highlight",
+  "displayName": "weilang-highlight",
+  "description": "weilang syntax highlight",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "weilang",
+      "aliases": ["weilang", "weilang"],
+      "extensions": [".wei"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "weilang",
+      "scopeName": "source.weilang",
+      "path": "./syntaxes/weilang.tmLanguage.json"
+    }]
+  }
+}

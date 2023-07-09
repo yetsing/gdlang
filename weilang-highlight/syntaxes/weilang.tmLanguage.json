@@ -1,0 +1,369 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "weilang",
+	"patterns": [
+		{
+			"comment": "函数调用",
+			"match": "(\\w+)\\(",
+			"name": "meta.function-call.weilang entity.name.function.weilang"
+		},
+		{
+			"comment": "函数定义",
+			"match": "^\\b(con|var)\\b\\s+(\\w+)\\s+=\\s+(\\bfn\\b)\\(",
+			"captures": {
+				"1": {
+					"name": "keyword.con.weilang"
+				},
+				"2": {
+					"name": "entity.name.function.weilang"
+				},
+				"3": {
+					"name": "keyword.function.weilang"
+				}
+			}
+		},
+		{
+			"include": "#shebang"
+		},
+		{
+			"include": "#statements"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#single-strings"
+		},
+		{
+			"comment": "数字",
+			"include": "#numeric_literals"
+		},
+		{
+			"comment": "Language constants",
+			"match": "\\b(true|false|null)\\b",
+			"name": "constant.language.weilang"
+		},
+		{
+			"comment": "Built-in functions",
+			"match": "\\b(abs|bin|len|hex|oct|print|typ)\\b(?=\\()",
+			"name": "support.function.builtin.weilang"
+		},
+		{
+			"comment": "Terminators",
+			"match": ";",
+			"name": "punctuation.terminator.weilang"
+		},
+		{
+			"include": "#brackets"
+		},
+		{
+			"include": "#delimiters"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#operators"
+		},
+		{
+			"include": "#runes"
+		}
+	],
+	"repository": {
+		"brackets": {
+			"patterns": [
+				{
+					"begin": "{",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.begin.bracket.curly.weilang"
+						}
+					},
+					"end": "}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.end.bracket.curly.weilang"
+						}
+					},
+					"patterns": [
+						{
+							"include": "$self"
+						}
+					]
+				},
+				{
+					"begin": "\\(",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.begin.bracket.round.weilang"
+						}
+					},
+					"end": "\\)",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.end.bracket.round.weilang"
+						}
+					},
+					"patterns": [
+						{
+							"include": "$self"
+						}
+					]
+				},
+				{
+					"match": "\\[|\\]",
+					"name": "punctuation.definition.bracket.square.weilang"
+				}
+			]
+		},
+		"delimiters": {
+			"patterns": [
+				{
+					"match": ",",
+					"name": "punctuation.other.comma.weilang"
+				},
+				{
+					"comment": "匹配单个点而不是三个点",
+					"match": "\\.(?!\\.\\.)",
+					"name": "punctuation.other.period.weilang"
+				},
+				{
+					"match": ":",
+					"name": "punctuation.other.colon.weilang"
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"comment": "Flow control keywords",
+					"match": "\\b(break|continue|else|for|if|while|return)\\b",
+					"name": "keyword.control.weilang"
+				},
+				{
+					"match": "\\bvar\\b",
+					"name": "keyword.var.weilang"
+				},
+				{
+					"match": "\\bcon\\b",
+					"name": "keyword.con.weilang"
+				},
+				{
+					"match": "\\bfn\\b",
+					"name": "keyword.function.weilang"
+				},
+				{
+					"match": "\\b(not|and|or)\\b",
+					"name": "keyword.other.weilang"
+				}
+			]
+		},
+		"operators": {
+			"comment": "Note that the order here is very important!",
+			"patterns": [
+				{
+					"match": "(\\*|&)(?=\\w)",
+					"name": "keyword.operator.address.weilang"
+				},
+				{
+					"match": "\\-\\-",
+					"name": "keyword.operator.decrement.weilang"
+				},
+				{
+					"match": "\\+\\+",
+					"name": "keyword.operator.increment.weilang"
+				},
+				{
+					"match": "(==|!=|<=|>=|<(?!<)|>(?!>))",
+					"name": "keyword.operator.comparison.weilang"
+				},
+				{
+					"match": "(=|\\+=|\\-=|\\|=|\\^=|\\*=|/=|:=|%=|<<=|>>=|&\\^=|&=)",
+					"name": "keyword.operator.assignment.weilang"
+				},
+				{
+					"match": "(\\+|\\-|\\*|/|%)",
+					"name": "keyword.operator.arithmetic.weilang"
+				},
+				{
+					"match": "(&(?!\\^)|\\||\\^|&\\^|<<|>>)",
+					"name": "keyword.operator.arithmetic.bitwise.weilang"
+				},
+				{
+					"match": "\\.\\.\\.",
+					"name": "keyword.operator.ellipsis.weilang"
+				}
+			]
+		},
+		"shebang": {
+			"name": "comment.line.shebang.weilang",
+			"match": "\\A(#!).*(?=$)",
+			"captures": {
+				"1": {
+					"name": "punctuation.definition.comment.weilang"
+				}
+			}
+		},
+		"statements": {
+			"patterns": [
+				{
+					"include": "#declaration"
+				},
+				{
+					"include": "#comment"
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"include": "#single-line-comment"
+				}
+			]
+		},
+		"single-line-comment":{
+			"name": "comment.line.double-slash.weilang",
+			"begin": "(\\/\\/)",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.definition.comment.weilang"
+				}
+			},
+			"end": "(?:\\n|$)"
+		},
+		"strings": {
+			"patterns": [
+				{
+					"include": "#double_string"
+				},
+				{
+					"include": "#single_string"
+				},
+				{
+					"include":"#raw_string"
+				}
+			]
+		},
+		"double_string": {
+			"comment": "双引号字符串",
+			"name": "string.quoted.double.weilang",
+			"begin": "\"",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.weilang"
+				}
+			},
+			"end": "\"",
+			"patterns": [
+				{
+					"include": "#string_escaped_char"
+				},
+				{
+					"include": "#string_placeholder"
+				}
+			]
+		},
+		"single_string": {
+			"comment": "单引号字符串",
+			"name": "string.quoted.single.weilang",
+			"begin": "'",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.weilang"
+				}
+			},
+			"end": "'",
+			"patterns": [
+				{
+					"include": "#string_escaped_char"
+				},
+				{
+					"include": "#string_placeholder"
+				}
+			]
+		},
+		"raw_string": {
+			"comment": "Raw string literals",
+			"begin": "`",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.weilang"
+				}
+			},
+			"end": "`",
+			"endCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.end.weilang"
+				}
+			},
+			"name": "string.quoted.raw.weilang",
+			"patterns": [
+				{
+					"include": "#string_placeholder"
+				}
+			]
+		},
+		"numeric_literals": {
+			"patterns": [
+				{
+					"include": "#hexadecimal_number"
+				},
+				{
+					"include": "#octal_number"
+				},
+				{
+					"include": "#binary_number"
+				},
+				{
+					"include": "#decimal_number"
+				}
+			]
+		},
+		"decimal_number": {
+			"comment": "十进制数字",
+			"match": "\\d+",
+			"name": "constant.numeric.decimal.weilang"
+		},
+		"hexadecimal_number": {
+			"comment": "十六进制数字",
+			"match": "0(x|X)[0-9a-fA-F_]+",
+			"name": "constant.numeric.hexadecimal.weilang"
+		},
+		"octal_number": {
+			"comment": "八进制数字",
+			"comment": "十六进制数字",
+			"match": "0(o|O)[0-7_]+",
+			"name": "constant.numeric.octal.weilang"
+		},
+		"binary_number": {
+			"comment": "二进制数字",
+			"match": "0(b|B)[01_]+",
+			"name": "constant.numeric.binary.weilang"
+		},
+		"string_escaped_char": {
+			"patterns": [
+				{
+					"match": "\\\\([0-7]{3}|[abfnrtv\\\\'\"]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})",
+					"name": "constant.character.escape.weilang"
+				},
+				{
+					"match": "\\\\[^0-7xuUabfnrtv\\'\"]",
+					"name": "invalid.illegal.unknown-escape.weilang"
+				}
+			]
+		},
+		"string_placeholder": {
+			"patterns": [
+				{
+					"comment": "字符串格式化的占位符",
+					"match": "\\{}",
+					"name": "constant.other.placeholder.weilang"
+				}
+			]
+		}
+	},
+	"scopeName": "source.weilang"
+}
