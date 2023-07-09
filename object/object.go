@@ -1,7 +1,5 @@
 package object
 
-import "fmt"
-
 type ObjectType string
 
 const (
@@ -40,102 +38,6 @@ func TypeIn(obj Object, a ...ObjectType) bool {
 	return false
 }
 
-type ReturnValue struct {
-	Value Object
-}
-
-func (rv *ReturnValue) Type() ObjectType {
-	return RETURN_VALUE_OBJ
-}
-
-func (rv *ReturnValue) TypeIs(objectType ObjectType) bool {
-	return rv.Type() == objectType
-}
-
-func (rv *ReturnValue) TypeNotIs(objectType ObjectType) bool {
-	return rv.Type() != objectType
-}
-
-func (rv *ReturnValue) String() string {
-	return rv.Value.String()
-}
-
-type BuiltinFunction func(args ...Object) Object
-
-type Builtin struct {
-	Name string
-	Fn   BuiltinFunction
-}
-
-func (b *Builtin) Type() ObjectType {
-	return BUILTIN_OBJ
-}
-
-func (b *Builtin) TypeIs(objectType ObjectType) bool {
-	return b.Type() == objectType
-}
-
-func (b *Builtin) TypeNotIs(objectType ObjectType) bool {
-	return b.Type() != objectType
-}
-
-func (b *Builtin) String() string {
-	return fmt.Sprintf("<builtin function %s>", b.Name)
-}
-
-type BuiltinMethodFunction func(obj Object, args ...Object) Object
-
-type BuiltinMethod struct {
-	ctype ObjectType
-	name  string
-	Fn    BuiltinMethodFunction
-}
-
-func (b *BuiltinMethod) Type() ObjectType {
-	return BUILTIN_METHOD_OBJ
-}
-
-func (b *BuiltinMethod) TypeIs(objectType ObjectType) bool {
-	return b.Type() == objectType
-}
-
-func (b *BuiltinMethod) TypeNotIs(objectType ObjectType) bool {
-	return b.Type() != objectType
-}
-
-func (b *BuiltinMethod) String() string {
-	return fmt.Sprintf("<builtin method '%s' of '%s' object>", b.name, b.ctype)
-}
-
-// BoundBuiltinMethod 绑定了实例变量的内置方法
-type BoundBuiltinMethod struct {
-	*BuiltinMethod
-	This Object
-}
-
-func (b *BoundBuiltinMethod) Type() ObjectType {
-	return BOUND_BUILTIN_METHOD_OBJ
-}
-
-func (b *BoundBuiltinMethod) TypeIs(objectType ObjectType) bool {
-	return b.Type() == objectType
-}
-
-func (b *BoundBuiltinMethod) TypeNotIs(objectType ObjectType) bool {
-	return b.Type() != objectType
-}
-
-func (b *BoundBuiltinMethod) String() string {
-	return fmt.Sprintf("<bound builtin method '%s' of '%s' object>", b.name, b.ctype)
-}
-
-func (b *BoundBuiltinMethod) GetAttribute(name string) Object {
-	if name == "__name__" {
-		return NewString(b.name)
-	}
-	return attributeError(string(b.ctype), name)
-}
-
 type Hashable interface {
 	HashKey() HashKey
 }
@@ -167,50 +69,4 @@ func (a *attributeStore) get(object Object, name string) Object {
 		}
 	}
 	return nil
-}
-
-// ==========================
-// 两个特殊值，用于处理 continue break 语句
-// ==========================
-var (
-	CONTINUE_VALUE = &ContinueValue{}
-	BREAK_VALUE    = &BreakValue{}
-)
-
-type ContinueValue struct {
-}
-
-func (c *ContinueValue) Type() ObjectType {
-	return CONTINUE_VALUE_OBJ
-}
-
-func (c *ContinueValue) TypeIs(objectType ObjectType) bool {
-	return c.Type() == objectType
-}
-
-func (c *ContinueValue) TypeNotIs(objectType ObjectType) bool {
-	return c.Type() != objectType
-}
-
-func (c *ContinueValue) String() string {
-	return "continue"
-}
-
-type BreakValue struct {
-}
-
-func (b *BreakValue) Type() ObjectType {
-	return BREAK_VALUE_OBJ
-}
-
-func (b *BreakValue) TypeIs(objectType ObjectType) bool {
-	return b.Type() == objectType
-}
-
-func (b *BreakValue) TypeNotIs(objectType ObjectType) bool {
-	return b.Type() != objectType
-}
-
-func (b *BreakValue) String() string {
-	return "break"
 }
