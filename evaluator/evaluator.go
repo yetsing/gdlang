@@ -19,31 +19,31 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.VarStatement:
 		val := Eval(node.Value, env)
-		if isError(val) {
+		if IsError(val) {
 			return val
 		}
 		ret := env.Add(node.Name.Value, val, false)
-		if isError(ret) {
+		if IsError(ret) {
 			return ret
 		}
 
 	case *ast.ConStatement:
 		val := Eval(node.Value, env)
-		if isError(val) {
+		if IsError(val) {
 			return val
 		}
 		ret := env.Add(node.Name.Value, val, true)
-		if isError(ret) {
+		if IsError(ret) {
 			return ret
 		}
 
 	case *ast.AssignStatement:
 		val := Eval(node.Value, env)
-		if isError(val) {
+		if IsError(val) {
 			return val
 		}
 		ret := env.Set(node.Name.Value, val)
-		if isError(ret) {
+		if IsError(ret) {
 			return ret
 		}
 
@@ -64,7 +64,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
-		if isError(val) {
+		if IsError(val) {
 			return val
 		}
 		return &object.ReturnValue{Value: val}
@@ -72,47 +72,47 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	// 表达式
 	case *ast.UnaryExpression:
 		operand := Eval(node.Operand, env)
-		if isError(operand) {
+		if IsError(operand) {
 			return operand
 		}
 		return evalUnaryExpression(node.Operator, operand)
 
 	case *ast.BinaryOpExpression:
 		left := Eval(node.Left, env)
-		if isError(left) {
+		if IsError(left) {
 			return left
 		}
 		right := Eval(node.Right, env)
-		if isError(right) {
+		if IsError(right) {
 			return right
 		}
 		return evalBinaryOpExpression(node.Operator, left, right)
 
 	case *ast.CallExpression:
 		function := Eval(node.Function, env)
-		if isError(function) {
+		if IsError(function) {
 			return function
 		}
 		args := evalExpressions(node.Arguments, env)
-		if len(args) == 1 && isError(args[0]) {
+		if len(args) == 1 && IsError(args[0]) {
 			return args[0]
 		}
 		return applyFunction(function, args)
 
 	case *ast.SubscriptionExpression:
 		left := Eval(node.Left, env)
-		if isError(left) {
+		if IsError(left) {
 			return left
 		}
 		index := Eval(node.Index, env)
-		if isError(index) {
+		if IsError(index) {
 			return index
 		}
 		return evalSubscriptionExpression(left, index)
 
 	case *ast.AttributeExpression:
 		left := Eval(node.Left, env)
-		if isError(left) {
+		if IsError(left) {
 			return left
 		}
 		return evalAttributeExpression(left, node.Attribute.Value)
@@ -122,7 +122,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.ListLiteral:
 		elements := evalExpressions(node.Elements, env)
-		if len(elements) == 1 && isError(elements[0]) {
+		if len(elements) == 1 && IsError(elements[0]) {
 			return elements[0]
 		}
 		return object.NewList(elements)
@@ -190,7 +190,7 @@ func evalBlockStatements(block *ast.BlockStatement, env *object.Environment) obj
 func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object {
 	for _, branch := range is.IfBranches {
 		condition := Eval(branch.Condition, env)
-		if isError(condition) {
+		if IsError(condition) {
 			return condition
 		}
 		if isTruthy(condition) {
@@ -232,7 +232,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		}
 		extendedEnv := extendFunctionEnv(fn, args)
 		evaluated := Eval(fn.Body, extendedEnv)
-		if isError(evaluated) {
+		if IsError(evaluated) {
 			return evaluated
 		}
 		return unwrapReturnValue(evaluated)
@@ -323,7 +323,7 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 
 	for _, exp := range exps {
 		evaluated := Eval(exp, env)
-		if isError(evaluated) {
+		if IsError(evaluated) {
 			return []object.Object{evaluated}
 		}
 		result = append(result, evaluated)
@@ -337,7 +337,7 @@ func evalDictLiteral(node *ast.DictLiteral, env *object.Environment) object.Obje
 
 	for keyNode, valueNode := range node.Pairs {
 		key := Eval(keyNode, env)
-		if isError(key) {
+		if IsError(key) {
 			return key
 		}
 
@@ -347,7 +347,7 @@ func evalDictLiteral(node *ast.DictLiteral, env *object.Environment) object.Obje
 		}
 
 		value := Eval(valueNode, env)
-		if isError(value) {
+		if IsError(value) {
 			return value
 		}
 

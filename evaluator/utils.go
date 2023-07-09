@@ -32,7 +32,7 @@ func unwrapReturnValue(obj object.Object) object.Object {
 	return object.NULL
 }
 
-func isError(obj object.Object) bool {
+func IsError(obj object.Object) bool {
 	if obj != nil {
 		return obj.TypeIs(object.ERROR_OBJ)
 	}

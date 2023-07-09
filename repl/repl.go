@@ -46,15 +46,18 @@ func Start(in io.Reader, out io.Writer) {
 
 		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
-			n := len(program.Statements)
-			// 如果最后一条语句不是表达式语句，不要输出任何值
-			if _, ok := program.Statements[n-1].(*ast.ExpressionStatement); !ok {
-				continue
-			}
+			if !evaluator.IsError(evaluated) {
+				n := len(program.Statements)
+				// 如果最后一条语句不是表达式语句，不要输出任何值
+				if _, ok := program.Statements[n-1].(*ast.ExpressionStatement); !ok {
+					continue
+				}
 
-			// 值为 null 不输出
-			if evaluated == object.NULL {
-				continue
+				// 值为 null 不输出
+				if evaluated == object.NULL {
+					continue
+				}
+
 			}
 
 			if _, err := io.WriteString(out, evaluated.String()); err != nil {

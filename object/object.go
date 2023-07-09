@@ -104,7 +104,7 @@ func (b *BuiltinMethod) TypeNotIs(objectType ObjectType) bool {
 }
 
 func (b *BuiltinMethod) String() string {
-	return fmt.Sprintf("<builtin method %s of %s object>", b.name, b.ctype)
+	return fmt.Sprintf("<builtin method '%s' of '%s' object>", b.name, b.ctype)
 }
 
 // BoundBuiltinMethod 绑定了实例变量的内置方法
@@ -126,7 +126,14 @@ func (b *BoundBuiltinMethod) TypeNotIs(objectType ObjectType) bool {
 }
 
 func (b *BoundBuiltinMethod) String() string {
-	return fmt.Sprintf("<bound builtin method %s of %s object>", b.name, b.ctype)
+	return fmt.Sprintf("<bound builtin method '%s' of '%s' object>", b.name, b.ctype)
+}
+
+func (b *BoundBuiltinMethod) GetAttribute(name string) Object {
+	if name == "__name__" {
+		return NewString(b.name)
+	}
+	return attributeError(string(b.ctype), name)
 }
 
 type Hashable interface {
