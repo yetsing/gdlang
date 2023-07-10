@@ -25,6 +25,9 @@ type Lexer struct {
 	// 标记索引和位置，方便计算 Token 的 start end
 	markIndex    int
 	markPosition token.Position
+	// token 数组和索引，用来支持回溯
+	tokenIndex int
+	tokens     []token.Token
 }
 
 func stringFromFilename(filename string) string {
@@ -37,13 +40,12 @@ func stringFromFilename(filename string) string {
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input, index: -1}
+	l := &Lexer{input: input, index: -1, tokenIndex: 0}
 	l.init()
 	l.readChar()
 	return l
 }
 
-//goland:noinspection ALL
 func NewWithFilename(filename string) *Lexer {
 	input := stringFromFilename(filename)
 	l := New(input)
@@ -51,7 +53,43 @@ func NewWithFilename(filename string) *Lexer {
 	return l
 }
 
+func (l *Lexer) GetLines() []string {
+	return strings.Split(l.input, "\n")
+}
+
+func (l *Lexer) GetTokenIndex() int {
+	return l.tokenIndex
+}
+
+func (l *Lexer) SetTokenIndex(index int) {
+	l.tokenIndex = index
+}
+
 func (l *Lexer) NextToken() token.Token {
+	tk := l.nextToken()
+	l.tokenIndex++
+	return tk
+}
+
+func (l *Lexer) PeekToken() token.Token {
+	tk := l.nextToken()
+	return tk
+}
+
+func (l *Lexer) Finish() {
+	l.ucodes = nil
+	l.tokens = nil
+}
+
+func (l *Lexer) nextToken() token.Token {
+	if l.tokenIndex >= len(l.tokens) {
+		tk := l.readToken()
+		l.tokens = append(l.tokens, tk)
+	}
+	return l.tokens[l.tokenIndex]
+}
+
+func (l *Lexer) readToken() token.Token {
 	var ttype token.TokenType
 
 	l.skipWhitespace()
@@ -164,10 +202,6 @@ func (l *Lexer) NextToken() token.Token {
 
 	l.readChar()
 	return l.buildToken(ttype)
-}
-
-func (l *Lexer) GetLines() []string {
-	return strings.Split(l.input, "\n")
 }
 
 func (l *Lexer) init() {
