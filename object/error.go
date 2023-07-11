@@ -30,9 +30,8 @@ func attributeError(otype, name string) *Error {
 	return NewError("'%s' object has not attribute '%s'", otype, name)
 }
 
-//goland:noinspection GoUnusedExportedFunction
-func RuntimeError(msg string) *Error {
-	return NewError("runtime error: %s", msg)
+func Unreachable(msg string) *Error {
+	return NewError("unreachable %s", msg)
 }
 
 func (e *Error) Type() ObjectType {

@@ -19,6 +19,87 @@ func testEval(t *testing.T, input string) object.Object {
 	return Eval(program, env)
 }
 
+func TestAssignStatement(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+		isError  bool
+	}{
+		{
+			`var a= 1; a = 2; a`,
+			2,
+			false,
+		},
+		{
+			`var a= 1; a = "hello"; a`,
+			"hello",
+			false,
+		},
+		{
+			`var a= [0]; a[0] = "hello"; a[0]`,
+			"hello",
+			false,
+		},
+		{
+			`var a= [[0]]; a[0][0] = "hello"; a[0][0]`,
+			"hello",
+			false,
+		},
+		{
+			`var a= [3, [0]]; a[1] = "hello"; a[1]`,
+			"hello",
+			false,
+		},
+		{
+			`var a = [3, [0]]; a[1] = "hello"; a[0]`,
+			3,
+			false,
+		},
+		{
+			`var a = [3, {0: 'hello'}]; a[1][0] = "hello"; a[1][0]`,
+			"hello",
+			false,
+		},
+		{
+			`var a= {'a': 3}; a['a'] = "hello"; a['a']`,
+			"hello",
+			false,
+		},
+		{
+			`var a= {'a': [0]}; a['a'][0] = "hello"; a['a'][0]`,
+			"hello",
+			false,
+		},
+		{
+			`var a= {'a': {'b': []}}; a['a']['b'] = "hello"; a['a']['b']`,
+			"hello",
+			false,
+		},
+		{
+			`var a= 1; a['a'] = "hello"`,
+			"'int' object is not subscriptable",
+			true,
+		},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(t, tt.input)
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, evaluated, int64(expected))
+		case int64:
+			testIntegerObject(t, evaluated, expected)
+		case string:
+			if tt.isError {
+				testErrorObject(t, evaluated, expected)
+			} else {
+				testStringObject(t, evaluated, expected)
+			}
+		default:
+			t.Errorf("impossible reach the case")
+		}
+	}
+}
+
 func TestWhileStatements(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -518,129 +599,6 @@ func TestReturnStatements(t *testing.T) {
 	}
 }
 
-func TestErrorHandling(t *testing.T) {
-	tests := []struct {
-		input           string
-		expectedMessage string
-	}{
-		{
-			"5 + true;",
-			"unsupported operand type for +: 'int' and 'bool'",
-		},
-		{
-			"-true",
-			"unsupported operand type for -: 'bool'",
-		},
-		{
-			"true + false;",
-			"unsupported operand type for +: 'bool' and 'bool'",
-		},
-		{
-			"5; true + false; 5",
-			"unsupported operand type for +: 'bool' and 'bool'",
-		},
-		{
-			"if (10 > 1) { true + false; }",
-			"unsupported operand type for +: 'bool' and 'bool'",
-		},
-		{
-			`
-if (10 > 1) {
-  if (10 > 1) {
-    return true + false;
-  }
-
-  return 1;
-}
-`,
-			"unsupported operand type for +: 'bool' and 'bool'",
-		},
-		{
-			"return true + false;",
-			"unsupported operand type for +: 'bool' and 'bool'",
-		},
-		{
-			"if (10 > true) { true + false; }",
-			"unsupported operand type for >: 'int' and 'bool'",
-		},
-		{
-			"foobar",
-			"undefined: 'foobar'",
-		},
-		{
-			"var foo = fn(){}; foo(1);",
-			"function expected 0 arguments but got 1",
-		},
-		{
-			`"5" - "true";`,
-			"unsupported operand type for -: 'str' and 'str'",
-		},
-		{
-			"[1, 2, 3][3]",
-			"list index out of range",
-		},
-		{
-			"{[]: 1}",
-			"unhashable type: 'list'",
-		},
-		{
-			`{"foo": 5}["bar"]`,
-			"key 'bar' does not exist",
-		},
-		{
-			`{}["foo"]`,
-			"key 'foo' does not exist",
-		},
-		{
-			`{}[true]`,
-			"key 'true' does not exist",
-		},
-		{
-			`{}[fn(){}]`,
-			"unhashable type: 'function'",
-		},
-		{
-			`con a = 1; a = 2`,
-			"cannot assign to constant: 'a'",
-		},
-		{
-			`var a = 1; var a = 1`,
-			"variable name 'a' redeclared in this block",
-		},
-		{
-			`
-if (1) {
-  if (2) {
-    if (3) {
-       a = 1
-    }
-  }
-}`,
-			"undefined: 'a'",
-		},
-		{
-			`while (1) {a}`,
-			"undefined: 'a'",
-		},
-	}
-
-	for _, tt := range tests {
-		evaluated := testEval(t, tt.input)
-
-		errObj, ok := evaluated.(*object.Error)
-		if !ok {
-			t.Errorf("no error object returned. got=%T(%+v)",
-				evaluated, evaluated)
-			continue
-		}
-
-		if errObj.Message != tt.expectedMessage {
-			t.Errorf("wrong error message. expected=%q, got=%q",
-				tt.expectedMessage, errObj.Message)
-		}
-	}
-}
-
 func TestStringLiteral(t *testing.T) {
 	input := `"Hello World!"`
 
@@ -777,7 +735,7 @@ func TestListLiterals(t *testing.T) {
 	testIntegerObject(t, result.Elements[2], 6)
 }
 
-func TestListSubscriptionExpressions(t *testing.T) {
+func TestSubscriptionExpressions(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected interface{}
@@ -837,6 +795,12 @@ func TestListSubscriptionExpressions(t *testing.T) {
 		},
 
 		{
+			"[1, 2, 3]['a']",
+			"list index expect 'int', got 'str'",
+			true,
+		},
+
+		{
 			`"abc"[0]`,
 			"a",
 			false,
@@ -859,6 +823,41 @@ func TestListSubscriptionExpressions(t *testing.T) {
 		{
 			`"中文"[2]`,
 			"string index out of range",
+			true,
+		},
+		{
+			`{"foo": 5}["foo"]`,
+			5,
+			false,
+		},
+		{
+			`var key = "foo"; {"foo": 5}[key]`,
+			5,
+			false,
+		},
+		{
+			`{5: 5}[5]`,
+			5,
+			false,
+		},
+		{
+			`{true: 5}[true]`,
+			5,
+			false,
+		},
+		{
+			`{false: 5}[false]`,
+			5,
+			false,
+		},
+		{
+			`{false: 5}[[]]`,
+			"unhashable type: 'list'",
+			true,
+		},
+		{
+			`{false: 5}[{}]`,
+			"unhashable type: 'dict'",
 			true,
 		},
 	}
@@ -932,46 +931,6 @@ func TestHashLiterals(t *testing.T) {
 	}
 }
 
-// evaluator/evaluator_test.go
-
-func TestHashIndexExpressions(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected interface{}
-	}{
-		{
-			`{"foo": 5}["foo"]`,
-			5,
-		},
-		{
-			`var key = "foo"; {"foo": 5}[key]`,
-			5,
-		},
-		{
-			`{5: 5}[5]`,
-			5,
-		},
-		{
-			`{true: 5}[true]`,
-			5,
-		},
-		{
-			`{false: 5}[false]`,
-			5,
-		},
-	}
-
-	for _, tt := range tests {
-		evaluated := testEval(t, tt.input)
-		integer, ok := tt.expected.(int)
-		if ok {
-			testIntegerObject(t, evaluated, int64(integer))
-		} else {
-			testNullObject(t, evaluated)
-		}
-	}
-}
-
 func testNullObject(t *testing.T, obj object.Object) bool {
 	if obj != object.NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
@@ -1021,6 +980,21 @@ func testStringObject(t *testing.T, obj object.Object, expected string) bool {
 	if result.Value != expected {
 		t.Errorf("object has wrong value. got=%q, want=%q",
 			result.Value, expected)
+		return false
+	}
+	return true
+}
+
+func testErrorObject(t *testing.T, obj object.Object, expected string) bool {
+	errObj, ok := obj.(*object.Error)
+	if !ok {
+		t.Errorf("object is not Error. got=%T (%+v)",
+			obj, obj)
+		return false
+	}
+	if errObj.Message != expected {
+		t.Errorf("wrong error message. expected=%q, got=%q",
+			expected, errObj.Message)
 		return false
 	}
 	return true

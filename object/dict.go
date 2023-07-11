@@ -44,3 +44,28 @@ func (d *Dict) String() string {
 	out.WriteString("}")
 	return out.String()
 }
+
+func (d *Dict) GetItem(key Object) Object {
+	hashKey, ok := key.(Hashable)
+	if !ok {
+		return NewError("unhashable type: '%s'", key.Type())
+	}
+
+	pair, ok := d.Pairs[hashKey.HashKey()]
+	if !ok {
+		return NewError("key '%s' does not exist", key.String())
+	}
+	return pair.Value
+}
+
+func (d *Dict) SetItem(key, value Object) Object {
+	hashKey, ok := key.(Hashable)
+	if !ok {
+		return NewError("unhashable type: '%s'", key.Type())
+	}
+	d.Pairs[hashKey.HashKey()] = HashPair{
+		Key:   key,
+		Value: value,
+	}
+	return nil
+}

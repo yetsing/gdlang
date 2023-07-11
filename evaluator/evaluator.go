@@ -38,14 +38,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 	case *ast.AssignStatement:
-		val := Eval(node.Value, env)
-		if IsError(val) {
-			return val
-		}
-		ret := env.Set(node.Name.Value, val)
-		if IsError(ret) {
-			return ret
-		}
+		return evalAssignStatement(node, env)
 
 	case *ast.IfStatement:
 		return evalIfStatement(node, env)
@@ -187,6 +180,42 @@ func evalBlockStatements(block *ast.BlockStatement, env *object.Environment) obj
 	return result
 }
 
+func evalAssignStatement(
+	assign *ast.AssignStatement, env *object.Environment,
+) object.Object {
+	val := Eval(assign.Value, env)
+	if IsError(val) {
+		return val
+	}
+	switch obj := assign.Left.(type) {
+	case *ast.Identifier:
+		ret := env.Set(obj.Value, val)
+		if IsError(ret) {
+			return ret
+		}
+		return nil
+	case *ast.SubscriptionExpression:
+		left := Eval(obj.Left, env)
+		if IsError(left) {
+			return left
+		}
+		index := Eval(obj.Index, env)
+		switch {
+		case left.TypeIs(object.LIST_OBJ):
+			listObj := left.(*object.List)
+			return listObj.SetItem(index, val)
+		case left.TypeIs(object.DICT_OBJ):
+			dictObj := left.(*object.Dict)
+			return dictObj.SetItem(index, val)
+		default:
+			return object.NewError("'%s' object is not subscriptable", left.Type())
+		}
+	default:
+		return object.Unreachable("assign")
+	}
+
+}
+
 func evalIfStatement(is *ast.IfStatement, env *object.Environment) object.Object {
 	for _, branch := range is.IfBranches {
 		condition := Eval(branch.Condition, env)
@@ -257,45 +286,17 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 
 func evalSubscriptionExpression(left, index object.Object) object.Object {
 	switch {
-	case left.TypeIs(object.LIST_OBJ) && index.TypeIs(object.INTEGER_OBJ):
-		return evalListSubscriptionExpression(left, index)
+	case left.TypeIs(object.LIST_OBJ):
+		listObj := left.(*object.List)
+		return listObj.GetItem(index)
 	case left.TypeIs(object.DICT_OBJ):
-		return evalDictSubscriptionExpression(left, index)
+		dictObj := left.(*object.Dict)
+		return dictObj.GetItem(index)
 	case left.TypeIs(object.STRING_OBJ):
 		return evalStringSubscriptionExpression(left, index)
 	default:
 		return object.NewError("'%s' object is not subscriptable", left.Type())
 	}
-}
-
-func evalListSubscriptionExpression(list, index object.Object) object.Object {
-	listObject := list.(*object.List)
-	idx := index.(*object.Integer).Value
-	length := int64(len(listObject.Elements))
-	if idx < 0 {
-		idx += length
-	}
-
-	if idx < 0 || idx > length-1 {
-		return object.NewError("list index out of range")
-	}
-
-	return listObject.Elements[idx]
-}
-
-func evalDictSubscriptionExpression(dict, index object.Object) object.Object {
-	dictObject := dict.(*object.Dict)
-
-	key, ok := index.(object.Hashable)
-	if !ok {
-		return object.NewError("unhashable type: '%s'", index.Type())
-	}
-
-	pair, ok := dictObject.Pairs[key.HashKey()]
-	if !ok {
-		return object.NewError("key '%s' does not exist", index.String())
-	}
-	return pair.Value
 }
 
 func evalStringSubscriptionExpression(s, index object.Object) object.Object {
