@@ -52,7 +52,7 @@ func (cs *ConStatement) String() string {
 
 type AssignStatement struct {
 	Token token.Token
-	Name  *Identifier
+	Left  Expression
 	Value Expression
 }
 
@@ -61,7 +61,7 @@ func (as *AssignStatement) TokenLiteral() string { return as.Token.Literal }
 func (as *AssignStatement) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(as.Name.String())
+	out.WriteString(as.Left.String())
 	out.WriteString(" = ")
 
 	out.WriteString(as.Value.String())

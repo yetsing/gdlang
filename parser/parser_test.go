@@ -260,6 +260,13 @@ func TestAssignStatements(t *testing.T) {
 		{"x = 5;", "x", 5},
 		{"y = true;", "y", true},
 		{"foobar = y;", "foobar", "y"},
+		{"foobar.a = y;", "(foobar.a)", "y"},
+		{"foobar.b.a = y;", "((foobar.b).a)", "y"},
+		{"foobar.c.b.a = y;", "(((foobar.c).b).a)", "y"},
+		{"foobar[1] = y;", "(foobar[1])", "y"},
+		{"foobar[1][2] = y;", "((foobar[1])[2])", "y"},
+		{"foobar[1][2]['a'] = y;", `(((foobar[1])[2])[a])`, "y"},
+		{"foobar[1].b.d['a'] = y;", `((((foobar[1]).b).d)[a])`, "y"},
 	}
 
 	for _, tt := range tests {
@@ -1485,6 +1492,7 @@ while (1) {
 }
 
 func testVarStatement(t *testing.T, s ast.Statement, name string) bool {
+	t.Helper()
 	if s.TokenLiteral() != "var" {
 		t.Errorf("s.TokenLiteral not 'var'. got=%q", s.TokenLiteral())
 		return false
@@ -1537,25 +1545,15 @@ func testConStatement(t *testing.T, s ast.Statement, name string) bool {
 }
 
 func testAssignStatement(t *testing.T, s ast.Statement, name string) bool {
-	if s.TokenLiteral() != name {
-		t.Errorf("s.TokenLiteral not '%s'. got=%q", name, s.TokenLiteral())
-		return false
-	}
-
+	t.Helper()
 	stmt, ok := s.(*ast.AssignStatement)
 	if !ok {
 		t.Errorf("s not *ast.AssignStatement. got=%T", s)
 		return false
 	}
 
-	if stmt.Name.Value != name {
-		t.Errorf("stmt.Name.Value not '%s'. got=%s", name, stmt.Name.Value)
-		return false
-	}
-
-	if stmt.Name.TokenLiteral() != name {
-		t.Errorf("stmt.Name.TokenLiteral() not '%s'. got=%s",
-			name, stmt.Name.TokenLiteral())
+	if stmt.Left.String() != name {
+		t.Errorf("stmt.Left not '%s'. got=%s", name, stmt.Left.String())
 		return false
 	}
 

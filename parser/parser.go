@@ -15,10 +15,15 @@ import (
 //   语句前后可以随意换行
 //   语句块（{} 括号包裹的）前后可以随意换行
 
+// 用来保存解析器 dump 后的信息
+type dumpInfo struct {
+	index int
+	token token.Token
+}
+
 type Parser struct {
 	l         *lexer.Lexer
 	currToken token.Token
-	peekToken token.Token
 	filename  string
 	lines     []string
 	// parenCount 进入的括号数量，用于判断当前解析是否在括号内
@@ -39,6 +44,9 @@ type Parser struct {
 	//   }
 	// }
 	whileStack []int
+	// 保存 token 用于回溯
+	backupTokens       []token.Token
+	backupTokenEnabled bool
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -49,8 +57,6 @@ func New(l *lexer.Lexer) *Parser {
 		parenCount: 0,
 		whileStack: []int{0},
 	}
-	// 填充 currToken 和 peekToken
-	p.nextToken()
 	p.nextToken()
 	return p
 }
@@ -129,6 +135,7 @@ func (p *Parser) isStatementEnd() bool {
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
+	info := p.dump()
 	switch p.currToken.Type {
 	case token.VAR:
 		return p.varStatement()
@@ -137,11 +144,12 @@ func (p *Parser) statement() (ast.Statement, error) {
 	case token.RETURN:
 		return p.returnStatement()
 	case token.IDENT:
-		if p.peekTokenIs(token.ASSIGN) {
-			return p.assignStatement()
-		} else {
-			return p.expressionStatement()
+		stmt, err := p.expressionStatement()
+		if err == nil {
+			return stmt, nil
 		}
+		p.restore(info)
+		return p.assignStatement()
 	case token.IF:
 		return p.ifStatement()
 	case token.WHILE:
@@ -247,14 +255,12 @@ func (p *Parser) returnStatement() (*ast.ReturnStatement, error) {
 	return stmt, nil
 }
 
-// assign_statement ::= IDENT "=" expression (";" | NEWLINE)
+// assignStatement 解析赋值语句
+//
+// assign_statement ::= primary "=" expression (";" | NEWLINE)
 func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 	tok := p.currToken
-	name := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
-	err := p.eat(token.IDENT)
+	left, err := p.primary()
 	if err != nil {
 		return nil, err
 	}
@@ -271,10 +277,61 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 	}
 	stmt := &ast.AssignStatement{
 		Token: tok,
-		Name:  name,
+		Left:  left,
 		Value: expr,
 	}
 	return stmt, nil
+}
+
+// primary 解析标志符、属性访问、下标访问
+//
+// primary          ::= IDENT ( subscription | attribute)*
+// subscription     ::= "[" expression "]"
+// attribute        ::= "." IDENT
+func (p *Parser) primary() (ast.Expression, error) {
+	tok := p.currToken
+	err := p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	var expr ast.Expression
+	expr = &ast.Identifier{Token: tok, Value: tok.Literal}
+	for p.currTokenIn(token.LBRACKET, token.DOT) {
+		tok = p.currToken
+		switch p.currToken.Type {
+		case token.LBRACKET:
+			_ = p.eat(token.LBRACKET)
+			index, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			expr = &ast.SubscriptionExpression{
+				Token: tok,
+				Left:  expr,
+				Index: index,
+			}
+			err = p.eat(token.RBRACKET)
+			if err != nil {
+				return nil, err
+			}
+		case token.DOT:
+			_ = p.eat(token.DOT)
+			ident := &ast.Identifier{
+				Token: p.currToken,
+				Value: p.currToken.Literal,
+			}
+			err = p.eat(token.IDENT)
+			if err != nil {
+				return nil, err
+			}
+			expr = &ast.AttributeExpression{
+				Token:     tok,
+				Left:      expr,
+				Attribute: ident,
+			}
+		}
+	}
+	return expr, nil
 }
 
 // expression_statement ::= expression (";" | NEWLINE)
@@ -944,7 +1001,7 @@ func (p *Parser) expressionList(end token.TokenType) ([]ast.Expression, error) {
 	//  expr,
 	//  expr1,expr2
 	//  expr1,expr2,
-	if p.currTokenIsNot(end) {
+	if p.currTokenNotIs(end) {
 		ele, err = p.expression()
 		if err != nil {
 			return nil, err
@@ -1129,6 +1186,18 @@ func (p *Parser) eat(t token.TokenType) error {
 	}
 }
 
+func (p *Parser) dump() *dumpInfo {
+	return &dumpInfo{
+		index: p.l.Dump(),
+		token: p.currToken,
+	}
+}
+
+func (p *Parser) restore(info *dumpInfo) {
+	p.l.Restore(info.index)
+	p.currToken = info.token
+}
+
 func (p *Parser) nextToken() {
 	p.doNextToken()
 	p.skipComment()
@@ -1138,8 +1207,7 @@ func (p *Parser) nextToken() {
 }
 
 func (p *Parser) doNextToken() {
-	p.currToken = p.peekToken
-	p.peekToken = p.l.NextToken()
+	p.currToken = p.l.NextToken()
 }
 
 func (p *Parser) skipNewline() {
@@ -1162,12 +1230,13 @@ func (p *Parser) currTokenIs(t token.TokenType) bool {
 	return p.currToken.TypeIs(t)
 }
 
-func (p *Parser) currTokenIsNot(t token.TokenType) bool {
-	return p.currToken.TypeIsNot(t)
+func (p *Parser) currTokenNotIs(t token.TokenType) bool {
+	return p.currToken.TypeNotIs(t)
 }
 
 func (p *Parser) peekTokenIs(t token.TokenType) bool {
-	return p.peekToken.TypeIs(t)
+	peek := p.l.PeekToken()
+	return peek.TypeIs(t)
 }
 
 func (p *Parser) expectError(expected token.TokenType) error {

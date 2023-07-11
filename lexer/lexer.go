@@ -40,7 +40,7 @@ func stringFromFilename(filename string) string {
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input, index: -1, tokenIndex: 0}
+	l := &Lexer{input: input, index: -1}
 	l.init()
 	l.readChar()
 	return l
@@ -57,36 +57,30 @@ func (l *Lexer) GetLines() []string {
 	return strings.Split(l.input, "\n")
 }
 
-func (l *Lexer) GetTokenIndex() int {
+func (l *Lexer) Dump() int {
 	return l.tokenIndex
 }
 
-func (l *Lexer) SetTokenIndex(index int) {
+func (l *Lexer) Restore(index int) {
 	l.tokenIndex = index
 }
 
 func (l *Lexer) NextToken() token.Token {
-	tk := l.nextToken()
+	tk := l.getToken(l.tokenIndex)
 	l.tokenIndex++
 	return tk
 }
 
 func (l *Lexer) PeekToken() token.Token {
-	tk := l.nextToken()
-	return tk
+	return l.getToken(l.tokenIndex)
 }
 
-func (l *Lexer) Finish() {
-	l.ucodes = nil
-	l.tokens = nil
-}
-
-func (l *Lexer) nextToken() token.Token {
-	if l.tokenIndex >= len(l.tokens) {
+func (l *Lexer) getToken(index int) token.Token {
+	if index >= len(l.tokens) {
 		tk := l.readToken()
 		l.tokens = append(l.tokens, tk)
 	}
-	return l.tokens[l.tokenIndex]
+	return l.tokens[index]
 }
 
 func (l *Lexer) readToken() token.Token {
@@ -209,6 +203,7 @@ func (l *Lexer) init() {
 	l.position.Line = 0
 	l.position.Column = -1
 	l.Filename = "<input>"
+	l.tokenIndex = 0
 }
 
 func (l *Lexer) skipWhitespace() {
