@@ -9,15 +9,19 @@ import (
 
 func TestProgram(t *testing.T) {
 	input := `
-var foo = fn(a) {
-	if(1){
-		var a = 2 
-	}
-	return a;
-}
-var b = foo(10)
-b
+// a
 
+// b
+// d
+var foo = fn(a) { // abc
+	if(1){
+		var a = 2 // abc
+	}
+	return a; // abc
+}
+var b = foo(10) // abc
+b // abc
+// if
 if(2) 
 {} 
 else {
@@ -38,6 +42,11 @@ while(2)
 var d = 1}
 
 b = b + 2
+var a = 'abc'
+// var m = [1, 2, 3, 4]
+// print(m.append(5, 6, 7, 8, 9))
+// m.append()
+print(a)
 `
 
 	l := lexer.New(input)
@@ -1472,13 +1481,30 @@ while (1) {
   }
 }
 `},
-		{`
-while (1) {
-  var foo = fn() {
-    break
-  }
+		{
+			`
+con eval = fn(code) {
+    var res = 0
+    var length = len(code)
+    if (code[0] == '+') {
+        var i = 1
+        while (i < length) {
+            res = res + code[i]
+            i = i + 1
+        }
+        return res
+    }
 }
-`},
+
+var result = eval(['+', 1, 2, 3, 4, 5, 6])
+print(result)
+var a = 'abc'
+// var m = [1, 2, 3, 4]
+// print(m.append(5, 6, 7, 8, 9))
+// m.append()
+print(a)
+`,
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)

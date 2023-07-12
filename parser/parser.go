@@ -1200,7 +1200,6 @@ func (p *Parser) restore(info *dumpInfo) {
 
 func (p *Parser) nextToken() {
 	p.doNextToken()
-	p.skipComment()
 	if p.parenCount > 0 {
 		p.skipNewline()
 	}
@@ -1208,6 +1207,7 @@ func (p *Parser) nextToken() {
 
 func (p *Parser) doNextToken() {
 	p.currToken = p.l.NextToken()
+	p.skipComment()
 }
 
 func (p *Parser) skipNewline() {
