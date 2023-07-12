@@ -7,8 +7,6 @@ import (
 	"unicode/utf8"
 )
 
-var strAttr *attributeStore
-
 type String struct {
 	*attributeStore
 	Length int
@@ -63,19 +61,10 @@ func (s *String) slice(start, end int) string {
 	return exutf8.RuneSubString(s.Value, start, end-start)
 }
 
-// convertRange 对 i 进行转换，使其满足 0 <= i <= n
-func convertRange(i, n int) int {
-	if i < 0 {
-		i += n
-	}
-	if i < 0 {
-		return 0
-	} else if i > n {
-		return n
-	} else {
-		return i
-	}
-}
+// ================================
+// str 对象的内置属性和方法
+// ================================
+var strAttr *attributeStore
 
 // countMethod 计算子字符串出现次数
 //

@@ -152,6 +152,10 @@ func TestStringBuiltinAttributeReference(t *testing.T) {
 		{`"中文abc".startswith("abc", -3)`, true, false},
 		{`"中文abc".startswith("abc", -3, -2)`, false, false},
 		{`"中文abc".startswith("abc", -3, 300)`, true, false},
+		{`"中文abc".startswith("abc", 100, 300)`, false, false},
+		{`"中文abc".startswith("c", 4, 300)`, true, false},
+		{`"中文abc".startswith("c", 5, 6)`, false, false},
+		{`"中文abc".startswith("c", 5, 60)`, false, false},
 
 		{`"中文".strip()`, "wrong number of arguments. got=0, want=1", true},
 		{`"中文".strip(1)`, "wrong argument type: 'int'", true},

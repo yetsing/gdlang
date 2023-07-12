@@ -6,6 +6,10 @@ type Error struct {
 	Message string
 }
 
+var (
+	atLeastOneArgument = NewError("want at least 1 arguments")
+)
+
 func NewError(format string, a ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, a...)}
 }
