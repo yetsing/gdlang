@@ -70,6 +70,12 @@ func TestListBuiltinAttributeReference(t *testing.T) {
 		{`var a = [1, 2, 3]; a.pop(-1)`, 3, false},
 		{`var a = [1, 2, 3]; a.pop(2); a[1]`, 2, false},
 		{`var a = [1, 2, 3]; a.pop(2); len(a)`, 2, false},
+
+		{`var a = [1, '2', true]; a.reverse(1); a[0]`, "wrong number of arguments. got=1, want=0", true},
+		{`var a = [1, '2', true]; a.reverse(1, 2); a[0]`, "wrong number of arguments. got=2, want=0", true},
+		{`var a = [1, '2', true]; a.reverse(); a[0]`, true, false},
+		{`var a = [1, '2', true]; a.reverse(); a[1]`, "2", false},
+		{`var a = [1, '2', true]; a.reverse(); a[2]`, 1, false},
 	}
 
 	for _, tt := range tests {

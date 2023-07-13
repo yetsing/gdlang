@@ -198,4 +198,20 @@ var listAttr = &attributeStore{
 				return ele
 			},
 		},
+		// list.reverse()
+		"reverse": &BuiltinMethod{
+			ctype: LIST_OBJ,
+			name:  "reverse",
+			Fn: func(obj Object, args ...Object) Object {
+				if len(args) > 0 {
+					return WrongNumberArgument(len(args), 0)
+				}
+				this := obj.(*List)
+				elements := this.Elements
+				for i, j := 0, len(elements)-1; i < j; i, j = i+1, j-1 {
+					elements[i], elements[j] = elements[j], elements[i]
+				}
+				return this
+			},
+		},
 	}}
