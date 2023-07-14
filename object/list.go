@@ -51,6 +51,19 @@ func (l *List) String() string {
 	return out.String()
 }
 
+// pop 弹出 idx 位置的元素，调用者需要保证 idx 在范围内
+func (l *List) pop(idx int) Object {
+	length := len(l.Elements)
+	elements := l.Elements
+	ele := elements[idx]
+	if idx == length-1 {
+		l.Elements = elements[:length-1]
+		return ele
+	}
+	l.Elements = append(elements[:idx], elements[idx+1:]...)
+	return ele
+}
+
 var (
 	outOfRange           = NewError("list index out of range")
 	assignmentOutOfRange = NewError("list assignment index out of range")
@@ -196,6 +209,29 @@ var listAttr = &attributeStore{
 				ele := elements[idx]
 				this.Elements = append(elements[:idx], elements[idx+1:]...)
 				return ele
+			},
+		},
+		// list.remove(obj)
+		"remove": &BuiltinMethod{
+			ctype: LIST_OBJ,
+			name:  "remove",
+			Fn: func(obj Object, args ...Object) Object {
+				if len(args) != 1 {
+					return WrongNumberArgument(len(args), 1)
+				}
+				this := obj.(*List)
+				idx := -1
+				for i, element := range this.Elements {
+					if equal(element, args[0]) {
+						idx = i
+						break
+					}
+				}
+				if idx != -1 {
+					this.pop(idx)
+					return this
+				}
+				return NewError("object not in list")
 			},
 		},
 		// list.reverse()
