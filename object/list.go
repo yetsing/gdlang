@@ -66,6 +66,7 @@ func (l *List) pop(idx int) Object {
 
 var (
 	outOfRange           = NewError("list index out of range")
+	popOutOfRange        = NewError("list pop index out of range")
 	assignmentOutOfRange = NewError("list assignment index out of range")
 )
 
@@ -170,6 +171,7 @@ var listAttr = &attributeStore{
 				elements := append(this.Elements, NULL)
 				copy(elements[idx+1:], elements[idx:])
 				elements[idx] = val
+				this.Elements = elements
 				return this
 			},
 		},
@@ -200,8 +202,14 @@ var listAttr = &attributeStore{
 				if length == 0 {
 					return NewError("pop from empty list")
 				}
-				idx := convertRange(int(arg.Value), length)
-				if idx >= length-1 {
+				idx := int(arg.Value)
+				if idx < 0 {
+					idx += length
+				}
+				if idx < 0 || idx >= length {
+					return popOutOfRange
+				}
+				if idx == length-1 {
 					ele := elements[length-1]
 					this.Elements = elements[:length-1]
 					return ele
