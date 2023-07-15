@@ -424,6 +424,10 @@ func evalBinaryOpExpression(
 		return object.NativeBoolToBooleanObject(left == right)
 	case operator == "!=":
 		return object.NativeBoolToBooleanObject(left != right)
+	case operator == "and":
+		return object.NativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
+	case operator == "or":
+		return object.NativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	default:
 		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
@@ -471,6 +475,10 @@ func evalIntegerBinaryOpExpression(
 		return object.NativeBoolToBooleanObject(leftVal == rightVal)
 	case "!=":
 		return object.NativeBoolToBooleanObject(leftVal != rightVal)
+	case "and":
+		return object.NativeBoolToBooleanObject(leftVal != 0 && rightVal != 0)
+	case "or":
+		return object.NativeBoolToBooleanObject(leftVal != 0 || rightVal != 0)
 	default:
 		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
@@ -493,6 +501,10 @@ func evalStringBinaryOpExpression(
 
 	case "!=":
 		return object.NativeBoolToBooleanObject(leftVal != rightVal)
+	case "and":
+		return object.NativeBoolToBooleanObject(len(leftVal) > 0 && len(rightVal) > 0)
+	case "or":
+		return object.NativeBoolToBooleanObject(len(leftVal) > 0 || len(rightVal) > 0)
 
 	default:
 		return object.NewError("unsupported operand type for %s: 'str' and 'str'", operator)

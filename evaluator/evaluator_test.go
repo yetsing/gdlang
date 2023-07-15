@@ -398,6 +398,23 @@ func TestEvalBooleanExpression(t *testing.T) {
 		{`"中文a" == "中文"`, false},
 		{`"中文a" != "中文"`, true},
 		{`"中文" != "中文"`, false},
+
+		{`1 and 0`, false},
+		{`1 and 2`, true},
+		{`"1" and ""`, false},
+		{`"1" and "2"`, true},
+		{`"1" and 2`, true},
+		{`2 > 1 and 3 > 2`, true},
+
+		{`1 or 0`, true},
+		{`1 or 2`, true},
+		{`"1" or ""`, true},
+		{`"1" or "2"`, true},
+		{`"1" or 2`, true},
+		{`2 > 1 or 3 > 2`, true},
+
+		{"not true and true", false},
+		{"not true or true", true},
 	}
 
 	for _, tt := range tests {
