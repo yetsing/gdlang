@@ -80,6 +80,9 @@ func TestAssignStatement(t *testing.T) {
 			"'int' object is not subscriptable",
 			true,
 		},
+		{`var d = {'a': 1}; d.a = 10; d.a`, 10, false},
+		{`var d = []; d.a = 10`, "'list' object has not attribute 'a'", true},
+		{`var d = 1; d.a = 10`, "'int' object can not set attribute", true},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(t, tt.input)
@@ -673,6 +676,9 @@ func TestBuiltinFunctions(t *testing.T) {
 		{`len([1 + 1])`, 1, false},
 		{`len(["one", "two"])`, 2, false},
 		{`len(["one", "two",])`, 2, false},
+		{`len({})`, 0, false},
+		{`len({1: 1})`, 1, false},
+		{`len({1: 1, 'a': 2})`, 2, false},
 
 		{`hex(255)`, "0xff", false},
 		{`hex(-42)`, "-0x2a", false},

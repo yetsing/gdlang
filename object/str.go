@@ -55,6 +55,10 @@ func (s *String) GetAttribute(name string) Object {
 	return attributeError(string(s.Type()), name)
 }
 
+func (s *String) SetAttribute(name string, value Object) Object {
+	return attributeError(string(s.Type()), name)
+}
+
 func (s *String) slice(start, end int) string {
 	start = convertRange(start, s.Length)
 	end = convertRange(end, s.Length)

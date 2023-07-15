@@ -49,6 +49,7 @@ type HashKey struct {
 
 type Attributable interface {
 	GetAttribute(name string) Object
+	SetAttribute(name string, value Object) Object
 }
 
 type attributeStore struct {

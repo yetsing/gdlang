@@ -210,6 +210,16 @@ func evalAssignStatement(
 		default:
 			return object.NewError("'%s' object is not subscriptable", left.Type())
 		}
+	case *ast.AttributeExpression:
+		left := Eval(obj.Left, env)
+		if IsError(left) {
+			return left
+		}
+		name := obj.Attribute.Value
+		if attr, ok := left.(object.Attributable); ok {
+			return attr.SetAttribute(name, val)
+		}
+		return object.NewError("'%s' object can not set attribute", left.Type())
 	default:
 		return object.Unreachable("assign")
 	}

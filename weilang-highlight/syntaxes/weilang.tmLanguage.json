@@ -70,6 +70,9 @@
 		},
 		{
 			"include": "#runes"
+		},
+		{
+			"include": "#identifier"
 		}
 	],
 	"repository": {
@@ -363,6 +366,10 @@
 					"name": "constant.other.placeholder.weilang"
 				}
 			]
+		},
+		"identifier": {
+			"name": "variable.other.weilang",
+			"match": "\\w+\\d*"
 		}
 	},
 	"scopeName": "source.weilang"

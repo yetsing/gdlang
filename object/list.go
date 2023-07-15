@@ -109,6 +109,10 @@ func (l *List) GetAttribute(name string) Object {
 	return attributeError(string(l.Type()), name)
 }
 
+func (l *List) SetAttribute(name string, value Object) Object {
+	return attributeError(string(l.Type()), name)
+}
+
 // ================================
 // list 对象的内置属性和方法
 // ================================

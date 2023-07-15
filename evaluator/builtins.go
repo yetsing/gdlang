@@ -75,6 +75,8 @@ func _len(args ...object.Object) object.Object {
 		return &object.Integer{Value: int64(arg.Length)}
 	case *object.List:
 		return &object.Integer{Value: int64(len(arg.Elements))}
+	case *object.Dict:
+		return object.NewInteger(int64(len(arg.Pairs)))
 	default:
 		return object.NewError("wrong argument type for len(): '%s'", arg.Type())
 	}
