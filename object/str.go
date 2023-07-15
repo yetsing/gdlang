@@ -55,7 +55,7 @@ func (s *String) GetAttribute(name string) Object {
 	return attributeError(string(s.Type()), name)
 }
 
-func (s *String) SetAttribute(name string, value Object) Object {
+func (s *String) SetAttribute(name string, _ Object) Object {
 	return attributeError(string(s.Type()), name)
 }
 

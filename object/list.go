@@ -109,7 +109,7 @@ func (l *List) GetAttribute(name string) Object {
 	return attributeError(string(l.Type()), name)
 }
 
-func (l *List) SetAttribute(name string, value Object) Object {
+func (l *List) SetAttribute(name string, _ Object) Object {
 	return attributeError(string(l.Type()), name)
 }
 
