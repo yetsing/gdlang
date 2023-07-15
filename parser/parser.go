@@ -13,7 +13,7 @@ import (
 //   () 括号内可以随意换行
 //   [] {} 列表和字典字面量内可以随意换行
 //   语句前后可以随意换行
-//   语句块（{} 括号包裹的）前后可以随意换行
+//   语句块（{} 括号包裹的，包括 {}）前后可以随意换行
 
 // 用来保存解析器 dump 后的信息
 type dumpInfo struct {
@@ -101,6 +101,7 @@ func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 		return nil, err
 	}
 	block := &ast.BlockStatement{Token: tok}
+	// 处理空的语句块的情况，例如 "if (1) {}"
 	p.skipNewline()
 
 	for !p.currTokenIs(token.RBRACE) {
@@ -361,44 +362,35 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 		return nil, err
 	}
 	branches = append(branches, branch)
-	// 这些判断用来保证不会有这种写法————语句紧跟在 } 后面，如下所示
-	// if(1) {}var a = 1
-	// 第一个 if 块之后，后面的 token 要么是换行、要么是 else 、要么是 EOF
-	if !p.currTokenIn(token.NEWLINE, token.ELSE, token.EOF) {
-		return nil, p.expectError(token.NEWLINE)
-	}
+	endToken := p.currToken
 	p.skipNewline()
 
 	for p.currTokenIs(token.ELSE) {
 		p.nextToken()
-		tmp := p.currToken
-		p.skipNewline()
 		if p.currTokenIs(token.IF) {
-			// else 和 if 之间不允许换行
-			if tmp.TypeIs(token.NEWLINE) {
-				return nil, p.syntaxError(`"else" and "if" must be one line`)
-			}
 			branch, err = p.ifBranch()
 			if err != nil {
 				return nil, err
 			}
 			branches = append(branches, branch)
-			// else if 块之后，后面的 token 要么是换行、要么是 else 、要么是 EOF
-			if !p.currTokenIn(token.NEWLINE, token.ELSE, token.EOF) {
-				return nil, p.expectError(token.NEWLINE)
-			}
+			endToken = p.currToken
 			p.skipNewline()
 		} else {
 			elseBody, err = p.blockStatement()
 			if err != nil {
 				return nil, err
 			}
-			err = p.eatIn(token.NEWLINE, token.EOF)
-			if err != nil {
-				return nil, err
-			}
 			break
 		}
+	}
+	// endToken 用来避免语句直接跟在 } 后面，而不是另起一行
+	// 麻烦点在于 if 语句会有多个语句块
+	// 需要处理下面三种情况
+	// if(1) {} var a = 1
+	// if(1) {} else if(2) {} var a = 1
+	// if(1) {} else if(2) {} else {} var a = 1
+	if !endToken.TypeIs(token.NEWLINE) && !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.IfStatement{
 		Token:      tok,
@@ -466,11 +458,8 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 		return nil, err
 	}
 	p.whileStack[len(p.whileStack)-1]--
-	// 这些判断用来保证不会有这种写法————语句紧跟在 } 后面，如下所示
-	// while(1) {}var a = 1
-	err = p.eatIn(token.NEWLINE, token.EOF)
-	if err != nil {
-		return nil, err
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.WhileStatement{
 		Token:     tok,
@@ -1207,6 +1196,11 @@ func (p *Parser) nextToken() {
 
 func (p *Parser) doNextToken() {
 	p.currToken = p.l.NextToken()
+	//fmt.Printf("%d,%d-%d,%d:\t%s\t%q\n",
+	//	p.currToken.Start.Line, p.currToken.Start.Column,
+	//	p.currToken.End.Line, p.currToken.End.Column,
+	//	p.currToken.Type, p.currToken.Literal,
+	//)
 	p.skipComment()
 }
 
@@ -1218,7 +1212,7 @@ func (p *Parser) skipNewline() {
 
 func (p *Parser) skipComment() {
 	for p.currTokenIs(token.COMMENT) {
-		p.doNextToken()
+		p.currToken = p.l.NextToken()
 	}
 }
 

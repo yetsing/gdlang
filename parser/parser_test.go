@@ -53,12 +53,14 @@ print(a)
 	p := New(l)
 	program, err := p.ParseProgram()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
+		t.FailNow()
 	}
 
 	if len(program.Statements) < 3 {
-		t.Fatalf("program.Statements does not contain 3 statements. got=%d",
+		t.Errorf("program.Statements does not contain 3 statements. got=%d",
 			len(program.Statements))
+		t.FailNow()
 	}
 
 	stmt := program.Statements[0].(*ast.VarStatement)
@@ -1481,39 +1483,15 @@ while (1) {
   }
 }
 `},
-		{
-			`
-con eval = fn(code) {
-    var res = 0
-    var length = len(code)
-    if (code[0] == '+') {
-        var i = 1
-        while (i < length) {
-            res = res + code[i]
-            i = i + 1
-        }
-        return res
-    }
-}
-
-var result = eval(['+', 1, 2, 3, 4, 5, 6])
-print(result)
-var a = 'abc'
-// var m = [1, 2, 3, 4]
-// print(m.append(5, 6, 7, 8, 9))
-// m.append()
-print(a)
-`,
-		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
 		p := New(l)
 		_, err := p.ParseProgram()
 		if err == nil {
-			t.Fatalf("expected error")
+			t.Errorf("expected error\n%s", tt.input)
 		}
-		t.Logf("%v", err)
+		//t.Logf("%v", err)
 	}
 }
 
