@@ -4,10 +4,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"weilang/lexer"
 	"weilang/object"
 	"weilang/parser"
 )
+
+var modules map[string]*object.Module
 
 type Wei struct {
 	module *object.Module
@@ -69,6 +72,7 @@ func NewWeiEnvironment(filename string) *object.Environment {
 var weiBuiltins map[string]*object.Builtin
 
 func init() {
+	modules = make(map[string]*object.Module)
 	weiBuiltins = map[string]*object.Builtin{
 		"import": {
 			Name: "import",
@@ -81,9 +85,15 @@ func init() {
 					return object.WrongArgumentTypeAt(args[0].Type(), 1)
 				}
 				filename := arg.Value
+				if !strings.HasSuffix(filename, ".wei") {
+					filename = filename + ".wei"
+				}
 				path, _ := filepath.Abs(filename)
 				if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
-					return object.NewError("Not found module filename: %s", filename)
+					return object.NewError("Not found module filename: %s", arg.Value)
+				}
+				if mod, ok := modules[path]; ok {
+					return mod
 				}
 				l := lexer.NewWithFilename(path)
 				p := parser.New(l)
@@ -99,6 +109,7 @@ func init() {
 				if IsError(evaluated) {
 					return evaluated
 				}
+				modules[path] = wei.module
 				return wei.module
 			},
 		},
