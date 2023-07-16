@@ -1,10 +1,5 @@
 package object
 
-import (
-	"bytes"
-	"strings"
-)
-
 type List struct {
 	*attributeStore
 	Elements []Object
@@ -30,25 +25,8 @@ func (l *List) TypeNotIs(objectType ObjectType) bool {
 }
 
 func (l *List) String() string {
-	var out bytes.Buffer
-
-	var elements []string
-	for _, e := range l.Elements {
-		// 如果 list 里面的元素有自身，会导致无限递归
-		// 所以需要判断一下是不是自己
-		var es string
-		if e == l {
-			es = "[...]"
-		} else {
-			es = e.String()
-		}
-		elements = append(elements, es)
-	}
-
-	out.WriteString("[")
-	out.WriteString(strings.Join(elements, ", "))
-	out.WriteString("]")
-	return out.String()
+	visited := make(map[Object]bool)
+	return objectString(l, visited)
 }
 
 // pop 弹出 idx 位置的元素，调用者需要保证 idx 在范围内

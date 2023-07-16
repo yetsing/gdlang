@@ -1,11 +1,5 @@
 package object
 
-import (
-	"bytes"
-	"fmt"
-	"strings"
-)
-
 type HashPair struct {
 	Key   Object
 	Value Object
@@ -33,17 +27,8 @@ func (d *Dict) TypeNotIs(objectType ObjectType) bool {
 }
 
 func (d *Dict) String() string {
-	var out bytes.Buffer
-
-	var elements []string
-	for _, pair := range d.Pairs {
-		elements = append(elements, fmt.Sprintf("%s: %s", pair.Key.String(), pair.Value.String()))
-	}
-
-	out.WriteString("{")
-	out.WriteString(strings.Join(elements, ", "))
-	out.WriteString("}")
-	return out.String()
+	visited := make(map[Object]bool)
+	return objectString(d, visited)
 }
 
 func (d *Dict) GetItem(key Object) Object {

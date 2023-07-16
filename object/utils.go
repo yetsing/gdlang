@@ -1,5 +1,11 @@
 package object
 
+import (
+	"bytes"
+	"fmt"
+	"strings"
+)
+
 // convertRange 对 i 进行转换，使其满足 0 <= i <= n
 func convertRange(i, n int) int {
 	if i < 0 {
@@ -77,5 +83,51 @@ func recursiveEqual(a, b Object, visited map[Object]bool) bool {
 		return true
 	default:
 		return a == b
+	}
+}
+
+// objectString 递归地将对象转化为字符串
+func objectString(obj Object, visited map[Object]bool) string {
+	switch obj := obj.(type) {
+	case *List:
+		// 对象已经访问过了，直接返回，防止无限递归
+		if _, ok := visited[obj]; ok {
+			return "[...]"
+		}
+		visited[obj] = true
+
+		var out bytes.Buffer
+
+		var elements []string
+		for _, e := range obj.Elements {
+			es := objectString(e, visited)
+			elements = append(elements, es)
+		}
+
+		out.WriteString("[")
+		out.WriteString(strings.Join(elements, ", "))
+		out.WriteString("]")
+		return out.String()
+	case *Dict:
+		// 对象已经访问过了，直接返回，防止无限递归
+		if _, ok := visited[obj]; ok {
+			return "{...}"
+		}
+		visited[obj] = true
+
+		var out bytes.Buffer
+
+		var elements []string
+		for _, pair := range obj.Pairs {
+			vs := objectString(pair.Value, visited)
+			elements = append(elements, fmt.Sprintf("%s: %s", pair.Key.String(), vs))
+		}
+
+		out.WriteString("{")
+		out.WriteString(strings.Join(elements, ", "))
+		out.WriteString("}")
+		return out.String()
+	default:
+		return obj.String()
 	}
 }
