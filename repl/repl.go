@@ -21,7 +21,7 @@ var PROMPT = START_PROMPT
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
-	env := object.NewEnvironment()
+	env := evaluator.NewWeiEnvironment("")
 
 	var buffer bytes.Buffer
 	for {

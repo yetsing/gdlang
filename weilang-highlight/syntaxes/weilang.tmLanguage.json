@@ -63,9 +63,6 @@
 			"include": "#delimiters"
 		},
 		{
-			"include": "#keywords"
-		},
-		{
 			"include": "#operators"
 		},
 		{
@@ -159,7 +156,7 @@
 					"name": "keyword.function.weilang"
 				},
 				{
-					"match": "\\b(not|and|or)\\b",
+					"match": "\\b(not|and|or|wei)\\b",
 					"name": "keyword.other.weilang"
 				}
 			]

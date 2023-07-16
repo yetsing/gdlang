@@ -26,7 +26,7 @@ func wrongArgumentType(got ObjectType) *Error {
 	return NewError("wrong argument type: '%s'", got)
 }
 
-func wrongArgumentTypeAt(got ObjectType, at int) *Error {
+func WrongArgumentTypeAt(got ObjectType, at int) *Error {
 	return NewError("wrong argument type: '%s' at %d", got, at)
 }
 

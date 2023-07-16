@@ -131,8 +131,8 @@ func (p *Parser) isStatementEnd() bool {
 	}
 }
 
-// statement ::= var_statement | con_statement | expression_statement
-// | if_statement | wei_export_statement
+// statement ::= var_statement | con_statement | wei_export_statement
+// | expression_statement | if_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
@@ -160,7 +160,12 @@ func (p *Parser) statement() (ast.Statement, error) {
 	case token.BREAK:
 		return p.breakStatement()
 	case token.WEI:
-		return p.weiExportStatement()
+		stmt, err := p.weiExportStatement()
+		if err == nil {
+			return stmt, nil
+		}
+		p.restore(info)
+		return p.expressionStatement()
 	default:
 		return p.expressionStatement()
 	}

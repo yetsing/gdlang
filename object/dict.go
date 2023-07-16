@@ -194,7 +194,7 @@ var dictAttr = &attributeStore{
 				this := obj.(*Dict)
 				other, ok := args[0].(*Dict)
 				if !ok {
-					return wrongArgumentTypeAt(args[0].Type(), 1)
+					return WrongArgumentTypeAt(args[0].Type(), 1)
 				}
 				for key, pair := range other.Pairs {
 					this.Pairs[key] = pair

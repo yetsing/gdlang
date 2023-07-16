@@ -122,7 +122,7 @@ var listAttr = &attributeStore{
 				this := obj.(*List)
 				arg, ok := args[0].(*List)
 				if !ok {
-					return wrongArgumentTypeAt(args[0].Type(), 1)
+					return WrongArgumentTypeAt(args[0].Type(), 1)
 				}
 				this.Elements = append(this.Elements, arg.Elements...)
 				return this
@@ -140,7 +140,7 @@ var listAttr = &attributeStore{
 				this := obj.(*List)
 				index, ok := args[0].(*Integer)
 				if !ok {
-					return wrongArgumentTypeAt(args[0].Type(), 1)
+					return WrongArgumentTypeAt(args[0].Type(), 1)
 				}
 				val := args[1]
 				length := len(this.Elements)
@@ -179,7 +179,7 @@ var listAttr = &attributeStore{
 				}
 				arg, ok := args[0].(*Integer)
 				if !ok {
-					return wrongArgumentTypeAt(args[0].Type(), 1)
+					return WrongArgumentTypeAt(args[0].Type(), 1)
 				}
 				if length == 0 {
 					return NewError("pop from empty list")

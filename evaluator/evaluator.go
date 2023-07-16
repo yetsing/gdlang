@@ -62,6 +62,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.ReturnValue{Value: val}
 
+	case *ast.WeiExportStatement:
+		left, ok := env.Get("wei")
+		if !ok {
+			return object.Unreachable("undefined 'wei'")
+		}
+		wei := left.(*Wei)
+		module := wei.GetModule()
+		for _, name := range node.Names {
+			if _, ok := env.Get(name.Value); !ok {
+				return object.NewError("undefined '%s'", name.Value)
+			}
+			module.AddExport(name.Value)
+		}
+
 	// 表达式
 	case *ast.UnaryExpression:
 		operand := Eval(node.Operand, env)
@@ -69,6 +83,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return operand
 		}
 		return evalUnaryExpression(node.Operator, operand)
+
+	case *ast.WeiAttributeExpression:
+		left, ok := env.Get("wei")
+		if !ok {
+			return object.Unreachable("undefined 'wei'")
+		}
+		return evalAttributeExpression(left, node.Attribute.Value)
 
 	case *ast.BinaryOpExpression:
 		left := Eval(node.Left, env)

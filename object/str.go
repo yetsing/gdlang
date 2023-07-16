@@ -91,7 +91,7 @@ func countMethod(obj Object, args ...Object) Object {
 	this := obj.(*String)
 	sub, ok := args[0].(*String)
 	if !ok {
-		return wrongArgumentTypeAt(args[0].Type(), 1)
+		return WrongArgumentTypeAt(args[0].Type(), 1)
 	}
 	if argc == 1 {
 		return NewInteger(int64(strings.Count(this.Value, sub.Value)))
@@ -99,14 +99,14 @@ func countMethod(obj Object, args ...Object) Object {
 
 	startObj, ok := args[1].(*Integer)
 	if !ok {
-		return wrongArgumentTypeAt(args[1].Type(), 2)
+		return WrongArgumentTypeAt(args[1].Type(), 2)
 	}
 	start := int(startObj.Value)
 	end := this.Length
 	if argc == 3 {
 		endObj, ok := args[2].(*Integer)
 		if !ok {
-			return wrongArgumentTypeAt(args[2].Type(), 3)
+			return WrongArgumentTypeAt(args[2].Type(), 3)
 		}
 		end = int(endObj.Value)
 	}
@@ -133,19 +133,19 @@ func endswithMethod(obj Object, args ...Object) Object {
 
 	sub, ok := args[0].(*String)
 	if !ok {
-		return wrongArgumentTypeAt(args[0].Type(), 1)
+		return WrongArgumentTypeAt(args[0].Type(), 1)
 	}
 	if argc > 1 {
 		startObj, ok := args[1].(*Integer)
 		if !ok {
-			return wrongArgumentTypeAt(args[1].Type(), 2)
+			return WrongArgumentTypeAt(args[1].Type(), 2)
 		}
 		start = int(startObj.Value)
 		start = convertRange(start, this.Length)
 		if argc == 3 {
 			endObj, ok := args[2].(*Integer)
 			if !ok {
-				return wrongArgumentTypeAt(args[2].Type(), 3)
+				return WrongArgumentTypeAt(args[2].Type(), 3)
 			}
 			end = int(endObj.Value)
 			end = convertRange(end, this.Length)
@@ -175,7 +175,7 @@ func findMethod(obj Object, args ...Object) Object {
 
 	sub, ok := args[0].(*String)
 	if !ok {
-		return wrongArgumentTypeAt(args[0].Type(), 1)
+		return WrongArgumentTypeAt(args[0].Type(), 1)
 	}
 
 	if argc == 1 {
@@ -188,14 +188,14 @@ func findMethod(obj Object, args ...Object) Object {
 
 	startObj, ok := args[1].(*Integer)
 	if !ok {
-		return wrongArgumentTypeAt(args[1].Type(), 2)
+		return WrongArgumentTypeAt(args[1].Type(), 2)
 	}
 	start := int(startObj.Value)
 	end := this.Length
 	if argc == 3 {
 		endObj, ok := args[2].(*Integer)
 		if !ok {
-			return wrongArgumentTypeAt(args[2].Type(), 3)
+			return WrongArgumentTypeAt(args[2].Type(), 3)
 		}
 		end = int(endObj.Value)
 	}
@@ -311,7 +311,7 @@ func splitMethod(obj Object, args ...Object) Object {
 	this := obj.(*String)
 	sepObj, ok := args[0].(*String)
 	if !ok {
-		return wrongArgumentTypeAt(args[0].Type(), 1)
+		return WrongArgumentTypeAt(args[0].Type(), 1)
 	}
 	if sepObj.Length == 0 {
 		return NewError("empty separator")
@@ -327,7 +327,7 @@ func splitMethod(obj Object, args ...Object) Object {
 
 	intObj, ok := args[1].(*Integer)
 	if !ok {
-		return wrongArgumentTypeAt(args[1].Type(), 2)
+		return WrongArgumentTypeAt(args[1].Type(), 2)
 	}
 	maxsplit := int(intObj.Value)
 	result := strings.SplitN(this.Value, sepObj.Value, maxsplit+1)
@@ -352,18 +352,18 @@ func startswithMethod(obj Object, args ...Object) Object {
 
 	sub, ok := args[0].(*String)
 	if !ok {
-		return wrongArgumentTypeAt(args[0].Type(), 1)
+		return WrongArgumentTypeAt(args[0].Type(), 1)
 	}
 	if argc > 1 {
 		startObj, ok := args[1].(*Integer)
 		if !ok {
-			return wrongArgumentTypeAt(args[1].Type(), 2)
+			return WrongArgumentTypeAt(args[1].Type(), 2)
 		}
 		start = convertRange(int(startObj.Value), this.Length)
 		if argc == 3 {
 			endObj, ok := args[2].(*Integer)
 			if !ok {
-				return wrongArgumentTypeAt(args[2].Type(), 3)
+				return WrongArgumentTypeAt(args[2].Type(), 3)
 			}
 			end = convertRange(int(endObj.Value), this.Length)
 		}

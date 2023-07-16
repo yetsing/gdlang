@@ -16,6 +16,7 @@ func testEval(t *testing.T, input string) object.Object {
 	}
 
 	env := object.NewEnvironment()
+	env.Add("wei", NewWei(""), true)
 	return Eval(program, env)
 }
 

@@ -17,6 +17,8 @@ const (
 	BREAK_VALUE_OBJ          = "break_value"
 	BUILTIN_METHOD_OBJ       = "builtin_method"
 	BOUND_BUILTIN_METHOD_OBJ = "bound_builtin_method"
+	MODULE_OBJ               = "module"
+	WEI_OBJ                  = "wei"
 )
 
 type Object interface {
