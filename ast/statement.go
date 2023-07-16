@@ -210,3 +210,29 @@ func (b *BreakStatement) TokenLiteral() string { return b.Token.Literal }
 func (b *BreakStatement) String() string {
 	return "break"
 }
+
+type WeiExportStatement struct {
+	Token token.Token
+	Names []*Identifier
+}
+
+func (w *WeiExportStatement) statementNode() {
+
+}
+
+func (w *WeiExportStatement) TokenLiteral() string {
+	return w.Token.Literal
+}
+
+func (w *WeiExportStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("wei.export(")
+	var names []string
+	for _, n := range w.Names {
+		names = append(names, n.String())
+	}
+	out.WriteString(strings.Join(names, ","))
+	out.WriteString(")")
+	return out.String()
+}

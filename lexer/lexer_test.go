@@ -55,6 +55,8 @@ while(1) {
 1>>2
 1&^|~2
 not and or null
+con a = wei.import('abc')
+wei.export(a)
 `
 
 	tests := []struct {
@@ -636,6 +638,74 @@ not and or null
 		{
 			expectedType:    token.NULL,
 			expectedLiteral: "null",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.CON,
+			expectedLiteral: "con",
+		},
+		{
+			expectedType:    token.IDENT,
+			expectedLiteral: "a",
+		},
+		{
+			expectedType:    token.ASSIGN,
+			expectedLiteral: "=",
+		},
+		{
+			expectedType:    token.WEI,
+			expectedLiteral: "wei",
+		},
+		{
+			expectedType:    token.DOT,
+			expectedLiteral: ".",
+		},
+		{
+			expectedType:    token.IDENT,
+			expectedLiteral: "import",
+		},
+		{
+			expectedType:    token.LPAREN,
+			expectedLiteral: "(",
+		},
+		{
+			expectedType:    token.STRING,
+			expectedLiteral: "abc",
+		},
+		{
+			expectedType:    token.RPAREN,
+			expectedLiteral: ")",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.WEI,
+			expectedLiteral: "wei",
+		},
+		{
+			expectedType:    token.DOT,
+			expectedLiteral: ".",
+		},
+		{
+			expectedType:    token.IDENT,
+			expectedLiteral: "export",
+		},
+		{
+			expectedType:    token.LPAREN,
+			expectedLiteral: "(",
+		},
+		{
+			expectedType:    token.IDENT,
+			expectedLiteral: "a",
+		},
+		{
+			expectedType:    token.RPAREN,
+			expectedLiteral: ")",
 		},
 		{
 			expectedType:    token.NEWLINE,

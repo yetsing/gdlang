@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"weilang/token"
@@ -227,3 +228,14 @@ type StringLiteral struct {
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 func (sl *StringLiteral) String() string       { return sl.Token.Literal }
+
+type WeiAttributeExpression struct {
+	Token     token.Token
+	Attribute *Identifier
+}
+
+func (wa *WeiAttributeExpression) expressionNode()      {}
+func (wa *WeiAttributeExpression) TokenLiteral() string { return wa.Token.Literal }
+func (wa *WeiAttributeExpression) String() string {
+	return fmt.Sprintf("(wei.%s)", wa.Attribute.String())
+}

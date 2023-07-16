@@ -132,7 +132,7 @@ func (p *Parser) isStatementEnd() bool {
 }
 
 // statement ::= var_statement | con_statement | expression_statement
-// | if_statement
+// | if_statement | wei_export_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
@@ -159,9 +159,77 @@ func (p *Parser) statement() (ast.Statement, error) {
 		return p.continueStatement()
 	case token.BREAK:
 		return p.breakStatement()
+	case token.WEI:
+		return p.weiExportStatement()
 	default:
 		return p.expressionStatement()
 	}
+}
+
+// wei_export_statement ::= "wei" "." "export" "(" [wei_export_args] ")"
+// wei_export_args      ::= IDENT (,IDENT)*
+func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
+	tk := p.currToken
+	err := p.eat(token.WEI)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.DOT)
+	if err != nil {
+		return nil, err
+	}
+	literal := p.currToken.Literal
+	if literal != "export" {
+		return nil, p.syntaxError("expected 'export'")
+	}
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	p.parenCount++
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+
+	// 解析参数
+	var names []*ast.Identifier
+	if p.currTokenIs(token.IDENT) {
+		name := &ast.Identifier{
+			Token: p.currToken,
+			Value: p.currToken.Literal,
+		}
+		names = append(names, name)
+		p.nextToken()
+	}
+	for p.currTokenIs(token.COMMA) {
+		p.nextToken()
+		// 处理这种情况 wei.export(a,) ，最后一个参数后面有个逗号
+		if p.currTokenIs(token.RPAREN) {
+			break
+		}
+		name := &ast.Identifier{
+			Token: p.currToken,
+			Value: p.currToken.Literal,
+		}
+		names = append(names, name)
+		err = p.eat(token.IDENT)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	p.parenCount--
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := &ast.WeiExportStatement{
+		Token: tk,
+		Names: names,
+	}
+	return stmt, nil
 }
 
 // var_statement ::= "var" IDENT "=" expression (";" | NEWLINE)
@@ -875,6 +943,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 //
 // atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | NULL_LIT
 // | list_literal | dict_literal | function_literal | "(" expression ")"
+// | wei_attribute
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	var err error
@@ -945,6 +1014,8 @@ func (p *Parser) atom() (ast.Expression, error) {
 		return p.dictLiteral()
 	case token.FUNCTION:
 		return p.functionLiteral()
+	case token.WEI:
+		return p.weiAttribute()
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
@@ -1151,6 +1222,32 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 		p.nextToken()
 	}
 	return parameters, nil
+}
+
+// wei_attribute ::= "wei" "." IDENT
+func (p *Parser) weiAttribute() (*ast.WeiAttributeExpression, error) {
+	tk := p.currToken
+	err := p.eat(token.WEI)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.DOT)
+	if err != nil {
+		return nil, err
+	}
+	attribute := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	expr := &ast.WeiAttributeExpression{
+		Token:     tk,
+		Attribute: attribute,
+	}
+	return expr, nil
 }
 
 func (p *Parser) eatIn(ts ...token.TokenType) error {

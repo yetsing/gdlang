@@ -66,6 +66,7 @@ const (
 	NOT      = "not"
 	AND      = "and"
 	OR       = "or"
+	WEI      = "wei"
 
 	// NEWLINE 换行 token 用来保证一行一条语句
 	NEWLINE = "newline"
@@ -124,6 +125,7 @@ var keywords = map[string]TokenType{
 	"not":      NOT,
 	"and":      AND,
 	"or":       OR,
+	"wei":      WEI,
 }
 
 func LookupIdent(ident string) TokenType {
