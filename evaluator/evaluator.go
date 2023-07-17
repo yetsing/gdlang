@@ -68,18 +68,15 @@ func Eval(
 		return &object.ReturnValue{Value: val}
 
 	case *ast.WeiExportStatement:
-		left, ok := env.Get("wei")
-		if !ok {
-			return object.Unreachable("undefined 'wei'")
-		}
-		wei := left.(*Wei)
-		module := wei.GetModule()
-		for _, name := range node.Names {
-			if _, ok := env.Get(name.Value); !ok {
-				return object.NewError("undefined '%s'", name.Value)
+		var names []string
+		for _, ident := range node.Names {
+			name := ident.Value
+			if _, ok := env.Get(name); !ok {
+				return object.NewError("undefined '%s'", name)
 			}
-			module.AddExport(name.Value)
+			names = append(names, name)
 		}
+		return evalExport(ctx, env, node.Names)
 
 	// 表达式
 	case *ast.WeiImportExpression:

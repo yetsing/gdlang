@@ -5,13 +5,13 @@ import (
 	"weilang/object"
 )
 
-func TestWeiBuiltinAttributeReference(t *testing.T) {
+func TestWeiOperation(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected interface{}
 		isError  bool
 	}{
-		{`wei.hello`, "'wei' has not attribute 'hello'", true},
+		{`wei.hello`, "undefined: 'wei.hello'", true},
 		{`wei.filename`, "", false},
 		{`wei.import('notfound')`, "Not found module filename: notfound", true},
 	}

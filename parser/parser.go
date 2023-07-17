@@ -948,7 +948,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 //
 // atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | NULL_LIT
 // | list_literal | dict_literal | function_literal | "(" expression ")"
-// | wei_attribute
+// | wei_expression
 func (p *Parser) atom() (ast.Expression, error) {
 	var expr ast.Expression
 	var err error
@@ -1020,7 +1020,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 	case token.FUNCTION:
 		return p.functionLiteral()
 	case token.WEI:
-		return p.weiAttribute()
+		return p.weiExpression()
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
@@ -1229,8 +1229,8 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 	return parameters, nil
 }
 
-// wei_attribute ::= "wei" "." IDENT
-func (p *Parser) weiAttribute() (*ast.WeiAttributeExpression, error) {
+// wei_expression ::= ( "wei" "." IDENT ) | ( "wei" "." "import" "(" expression ")" )
+func (p *Parser) weiExpression() (ast.Expression, error) {
 	tk := p.currToken
 	err := p.eat(token.WEI)
 	if err != nil {
@@ -1239,6 +1239,26 @@ func (p *Parser) weiAttribute() (*ast.WeiAttributeExpression, error) {
 	err = p.eat(token.DOT)
 	if err != nil {
 		return nil, err
+	}
+	if p.currTokenLiteralIs("import") {
+		p.nextToken()
+		err = p.eat(token.LPAREN)
+		if err != nil {
+			return nil, err
+		}
+		name, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		err = p.eat(token.RPAREN)
+		if err != nil {
+			return nil, err
+		}
+		expr := &ast.WeiImportExpression{
+			Token:    tk,
+			Filename: name,
+		}
+		return expr, nil
 	}
 	attribute := &ast.Identifier{
 		Token: p.currToken,
@@ -1316,6 +1336,10 @@ func (p *Parser) skipComment() {
 	for p.currTokenIs(token.COMMENT) {
 		p.currToken = p.l.NextToken()
 	}
+}
+
+func (p *Parser) currTokenLiteralIs(s string) bool {
+	return p.currToken.LiteralIs(s)
 }
 
 func (p *Parser) currTokenIn(ts ...token.TokenType) bool {

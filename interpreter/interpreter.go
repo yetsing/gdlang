@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"weilang/evaluator"
 	"weilang/lexer"
+	"weilang/object"
 	"weilang/parser"
 )
 
@@ -16,8 +17,9 @@ func RunFile(filename string) {
 		return
 	}
 
-	env := evaluator.NewWeiEnvironment(filename)
-	evaluated := evaluator.Eval(program, env)
+	mod := object.NewModule("")
+	ctx := evaluator.NewModuleContext(mod)
+	evaluated := evaluator.Eval(ctx, program, mod.GetEnv())
 	if evaluator.IsError(evaluated) {
 		fmt.Println(evaluated.String())
 	}

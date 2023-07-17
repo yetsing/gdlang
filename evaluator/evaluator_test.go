@@ -15,9 +15,8 @@ func testEval(t *testing.T, input string) object.Object {
 		t.Fatalf("%v", err)
 	}
 
-	env := object.NewEnvironment()
-	env.Add("wei", NewWei(""), true)
-	return Eval(program, env)
+	mod := object.NewModule("")
+	return Eval(NewModuleContext(mod), program, mod.GetEnv())
 }
 
 func TestAssignStatement(t *testing.T) {

@@ -825,14 +825,59 @@ func TestCallExpressionParameterParsing(t *testing.T) {
 	}
 }
 
-func TestWeiExpression(t *testing.T) {
+func TestWeiImportExpression(t *testing.T) {
 	tests := []struct {
-		input     string
-		attribute string
+		input    string
+		expected string
 	}{
 		{
 			`con a = wei.import("abc")`,
-			"import",
+			"abc",
+		},
+		{
+			`con a = wei.import("/abc/ddd")`,
+			"/abc/ddd",
+		},
+		{
+			`con a = wei.import("/abc/ddd.wei")`,
+			"/abc/ddd.wei",
+		},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program, err := p.ParseProgram()
+		if err != nil {
+			t.Errorf("got error: %v", err)
+			t.FailNow()
+		}
+		if len(program.Statements) != 1 {
+			t.Errorf("wrong number of statements. got=%d, want=1", len(program.Statements))
+			t.FailNow()
+		}
+		stmt, ok := program.Statements[0].(*ast.ConStatement)
+		if !ok {
+			t.Errorf("want ConStatement, but got=%T", program.Statements[0])
+			t.FailNow()
+		}
+		weiImport, ok := stmt.Value.(*ast.WeiImportExpression)
+		if !ok {
+			t.Errorf("want WeiImportExpression, but got=%T", stmt.Value)
+			t.FailNow()
+		}
+		testStringLiteral(t, weiImport.Filename, tt.expected)
+	}
+}
+
+func TestWeiAttributeExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			`con a = wei.filename`,
+			"filename",
 		},
 	}
 
@@ -853,16 +898,11 @@ func TestWeiExpression(t *testing.T) {
 			t.Errorf("want ExpressionStatement, but got=%T", program.Statements[0])
 			t.FailNow()
 		}
-		call, ok := stmt.Value.(*ast.CallExpression)
+		weiAttr, ok := stmt.Value.(*ast.WeiAttributeExpression)
 		if !ok {
-			t.Errorf("want CallExpression, but got=%T", stmt.Value)
+			t.Errorf("want WeiAttributeExpression, but got=%T", stmt.Value)
 			t.FailNow()
 		}
-		weiAttr, ok := call.Function.(*ast.WeiAttributeExpression)
-		if !ok {
-			t.Errorf("want WeiAttributeExpression, but got=%T", call.Function)
-			t.FailNow()
-		}
-		testIdentifier(t, weiAttr.Attribute, tt.attribute)
+		testIdentifier(t, weiAttr.Attribute, tt.expected)
 	}
 }

@@ -47,7 +47,7 @@ while (1) {
 			`wei.`,
 		},
 		{
-			`wei.ddd`,
+			`wei.ddd d`,
 		},
 		{
 			`wei."export"`,
@@ -60,7 +60,7 @@ while (1) {
 		if err == nil {
 			t.Errorf("expected error\n%s", tt.input)
 		}
-		t.Logf("%v", err)
+		//t.Logf("%v", err)
 	}
 }
 
@@ -78,12 +78,12 @@ func testVarStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	if varStmt.Name.Value != name {
-		t.Errorf("varStmt.Name.Value not '%s'. got=%s", name, varStmt.Name.Value)
+		t.Errorf("varStmt.Filename.Value not '%s'. got=%s", name, varStmt.Name.Value)
 		return false
 	}
 
 	if varStmt.Name.TokenLiteral() != name {
-		t.Errorf("varStmt.Name.TokenLiteral() not '%s'. got=%s",
+		t.Errorf("varStmt.Filename.TokenLiteral() not '%s'. got=%s",
 			name, varStmt.Name.TokenLiteral())
 		return false
 	}
@@ -104,12 +104,12 @@ func testConStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	if stmt.Name.Value != name {
-		t.Errorf("stmt.Name.Value not '%s'. got=%s", name, stmt.Name.Value)
+		t.Errorf("stmt.Filename.Value not '%s'. got=%s", name, stmt.Name.Value)
 		return false
 	}
 
 	if stmt.Name.TokenLiteral() != name {
-		t.Errorf("stmt.Name.TokenLiteral() not '%s'. got=%s",
+		t.Errorf("stmt.Filename.TokenLiteral() not '%s'. got=%s",
 			name, stmt.Name.TokenLiteral())
 		return false
 	}
@@ -193,6 +193,20 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 		return false
 	}
 
+	return true
+}
+
+func testStringLiteral(t *testing.T, exp ast.Expression, value string) bool {
+	sl, ok := exp.(*ast.StringLiteral)
+	if !ok {
+		t.Errorf("exp not *ast.StringLiteral. got=%T", exp)
+		return false
+	}
+
+	if sl.Value != value {
+		t.Errorf("stringLiteral.Value not %s. got=%s", value, sl.Value)
+		return false
+	}
 	return true
 }
 

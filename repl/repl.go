@@ -21,7 +21,8 @@ var PROMPT = START_PROMPT
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
-	env := evaluator.NewWeiEnvironment("")
+	mod := object.NewModule("")
+	ctx := evaluator.NewModuleContext(mod)
 
 	var buffer bytes.Buffer
 	for {
@@ -44,7 +45,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		evaluated := evaluator.Eval(program, env)
+		evaluated := evaluator.Eval(ctx, program, mod.GetEnv())
 		if evaluated != nil {
 			if !evaluator.IsError(evaluated) {
 				n := len(program.Statements)

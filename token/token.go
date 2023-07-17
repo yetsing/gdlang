@@ -109,6 +109,10 @@ func (t *Token) TypeIn(ttypes ...TokenType) bool {
 	return false
 }
 
+func (t *Token) LiteralIs(s string) bool {
+	return t.Literal == s
+}
+
 var keywords = map[string]TokenType{
 	"fn":       FUNCTION,
 	"var":      VAR,

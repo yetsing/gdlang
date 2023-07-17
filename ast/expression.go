@@ -239,3 +239,16 @@ func (wa *WeiAttributeExpression) TokenLiteral() string { return wa.Token.Litera
 func (wa *WeiAttributeExpression) String() string {
 	return fmt.Sprintf("(wei.%s)", wa.Attribute.String())
 }
+
+type WeiImportExpression struct {
+	Token    token.Token
+	Filename Expression
+}
+
+func (w *WeiImportExpression) expressionNode() {}
+func (w *WeiImportExpression) TokenLiteral() string {
+	return w.Token.Literal
+}
+func (w *WeiImportExpression) String() string {
+	return fmt.Sprintf("(wei.import(%s))", w.Filename.String())
+}

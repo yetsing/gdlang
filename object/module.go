@@ -51,6 +51,9 @@ func (m *Module) AddExport(name string) {
 
 func NewModule(filename string) *Module {
 	env := NewEnvironment()
+	weiObj := newWei()
+	weiObj.Add("filename", NewString(filename))
+	env.AddWei(weiObj)
 	export := make(map[string]bool)
 	return &Module{
 		filename: filename,

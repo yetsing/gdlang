@@ -1,5 +1,7 @@
 package object
 
+const weiName = "wei"
+
 func NewEnclosedEnvironment(outer *Environment) *Environment {
 	env := NewEnvironment()
 	env.outer = outer
@@ -63,4 +65,17 @@ func (e *Environment) Set(name string, val Object) Object {
 func (e *Environment) Pass(name string, val Object) Object {
 	e.store[name] = val
 	return val
+}
+
+func (e *Environment) AddWei(val *wei) {
+	e.Add(weiName, val, true)
+}
+
+func (e *Environment) GetFromWei(name string) Object {
+	val, ok := e.Get(weiName)
+	if ok {
+		weiObj := val.(*wei)
+		return weiObj.GetAttribute(name)
+	}
+	panic("unreachable: not found wei from environment")
 }
