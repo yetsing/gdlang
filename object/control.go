@@ -1,5 +1,7 @@
 package object
 
+import "fmt"
+
 type ReturnValue struct {
 	Value Object
 }
@@ -18,6 +20,27 @@ func (rv *ReturnValue) TypeNotIs(objectType ObjectType) bool {
 
 func (rv *ReturnValue) String() string {
 	return rv.Value.String()
+}
+
+type TwoReturnValue struct {
+	First  Object
+	Second Object
+}
+
+func (rv *TwoReturnValue) Type() ObjectType {
+	return RETURN_VALUE_OBJ
+}
+
+func (rv *TwoReturnValue) TypeIs(objectType ObjectType) bool {
+	return rv.Type() == objectType
+}
+
+func (rv *TwoReturnValue) TypeNotIs(objectType ObjectType) bool {
+	return rv.Type() != objectType
+}
+
+func (rv *TwoReturnValue) String() string {
+	return fmt.Sprintf("(%s, %s)", rv.First, rv.Second)
 }
 
 // ==========================

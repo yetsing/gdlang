@@ -131,8 +131,16 @@ func (p *Parser) isStatementEnd() bool {
 	}
 }
 
-// statement ::= var_statement | con_statement | wei_export_statement
-// | expression_statement | if_statement
+// statement ::= var_statement | con_statement
+// | for_in_statement
+// | if_statement
+// | return_statement
+// | expression_statement
+// | assign_statement
+// | while_statement
+// | continue_statement
+// | break_statement
+// | wei_export_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
@@ -142,6 +150,8 @@ func (p *Parser) statement() (ast.Statement, error) {
 		return p.varStatement()
 	case token.CON:
 		return p.conStatement()
+	case token.FOR:
+		return p.forInStatement()
 	case token.RETURN:
 		return p.returnStatement()
 	case token.IDENT:
@@ -169,6 +179,58 @@ func (p *Parser) statement() (ast.Statement, error) {
 	default:
 		return p.expressionStatement()
 	}
+}
+
+// for_in_statement ::= "for" "(" IDENT "," IDENT "in" expression ")" block_statement  (";" | NEWLINE)
+func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
+	tk := p.currToken
+	err := p.eatContinuously(token.FOR, token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	first := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.COMMA)
+	if err != nil {
+		return nil, err
+	}
+	second := &ast.Identifier{
+		Token: p.currToken,
+		Value: p.currToken.Literal,
+	}
+	err = p.eatContinuously(token.IDENT, token.IN)
+	if err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
+	}
+	stmt := &ast.ForInStatement{
+		Token:  tk,
+		First:  first,
+		Second: second,
+		Expr:   expr,
+		Body:   body,
+	}
+	return stmt, nil
 }
 
 // wei_export_statement ::= "wei" "." "export" "(" [wei_export_args] ")"
@@ -422,7 +484,7 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	return stmt, nil
 }
 
-// if_statement ::= if_branch (else_if_branch)* [else_branch]
+// if_statement ::= if_branch (else_if_branch)* [else_branch]  (";" | NEWLINE)
 // if_branch      ::= "if" "(" expression ")" block_statement
 // else_if_branch ::= "else" if_branch
 // else_branch    ::= "else" block_statement
@@ -458,7 +520,7 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 	}
 	// endToken 用来避免语句直接跟在 } 后面，而不是另起一行
 	// 麻烦点在于 if 语句会有多个语句块
-	// 需要处理下面三种情况
+	// 需要处理下面三种非法情况
 	// if(1) {} var a = 1
 	// if(1) {} else if(2) {} var a = 1
 	// if(1) {} else if(2) {} else {} var a = 1
@@ -504,7 +566,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 	return branch, nil
 }
 
-// while_statement ::= "while" "(" expression ")" block_statement
+// while_statement ::= "while" "(" expression ")" block_statement  (";" | NEWLINE)
 func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 	tok := p.currToken
 	err := p.eat(token.WHILE)
@@ -1284,6 +1346,17 @@ func (p *Parser) eatIn(ts ...token.TokenType) error {
 	} else {
 		return p.expectError(ts[0])
 	}
+}
+
+func (p *Parser) eatContinuously(sequence ...token.TokenType) error {
+	var err error
+	for _, t := range sequence {
+		err = p.eat(t)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *Parser) eat(t token.TokenType) error {

@@ -66,6 +66,8 @@ const (
 	NOT      = "not"
 	AND      = "and"
 	OR       = "or"
+	FOR      = "for"
+	IN       = "in"
 	WEI      = "wei"
 
 	// NEWLINE 换行 token 用来保证一行一条语句
@@ -129,6 +131,8 @@ var keywords = map[string]TokenType{
 	"not":      NOT,
 	"and":      AND,
 	"or":       OR,
+	"for":      FOR,
+	"in":       IN,
 	"wei":      WEI,
 }
 

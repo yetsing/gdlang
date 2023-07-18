@@ -61,7 +61,7 @@ func (e *Environment) Set(name string, val Object) Object {
 	return val
 }
 
-// Pass 用于函数调用传值
+// Pass 用于函数调用传值、for-in 传值
 func (e *Environment) Pass(name string, val Object) Object {
 	e.store[name] = val
 	return val

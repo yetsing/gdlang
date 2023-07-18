@@ -38,6 +38,8 @@ func Unreachable(msg string) *Error {
 	return NewError("unreachable %s", msg)
 }
 
+var StopIteration = NewError("StopIteration")
+
 func (e *Error) Type() ObjectType {
 	return ERROR_OBJ
 }

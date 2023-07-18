@@ -57,6 +57,7 @@ while(1) {
 not and or null
 con a = wei.import('abc')
 wei.export(a)
+for in
 `
 
 	tests := []struct {
@@ -706,6 +707,18 @@ wei.export(a)
 		{
 			expectedType:    token.RPAREN,
 			expectedLiteral: ")",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.FOR,
+			expectedLiteral: "for",
+		},
+		{
+			expectedType:    token.IN,
+			expectedLiteral: "in",
 		},
 		{
 			expectedType:    token.NEWLINE,

@@ -67,6 +67,9 @@ func Eval(
 		}
 		return &object.ReturnValue{Value: val}
 
+	case *ast.ForInStatement:
+		return evalForInStatement(ctx, node, env)
+
 	case *ast.WeiExportStatement:
 		var names []string
 		for _, ident := range node.Names {
@@ -305,6 +308,44 @@ func evalWhileStatement(
 		}
 	}
 	return object.NULL
+}
+
+func evalForInStatement(
+	ctx context.Context,
+	forInStmt *ast.ForInStatement,
+	env *object.Environment,
+) object.Object {
+	obj := Eval(ctx, forInStmt.Expr, env)
+	iterable, ok := obj.(object.Iterable)
+	if !ok {
+		return object.NewError("'%s' object is not iterable", obj.Type())
+	}
+	iterator := iterable.Iter()
+	enclosedEnv := object.NewEnclosedEnvironment(env)
+	firstName := forInStmt.First.Value
+	secondName := forInStmt.Second.Value
+	i := int64(0)
+	for {
+		valObj, errObj := iterator.Next()
+		if errObj == object.StopIteration {
+			break
+		}
+		if valObj.Second == nil {
+			// 返回了一个值
+			enclosedEnv.Pass(firstName, object.NewInteger(i))
+			enclosedEnv.Pass(secondName, valObj.First)
+		} else {
+			// 返回了两个值
+			enclosedEnv.Pass(firstName, valObj.First)
+			enclosedEnv.Pass(secondName, valObj.Second)
+		}
+		ret := Eval(ctx, forInStmt.Body, enclosedEnv)
+		if IsError(ret) {
+			return ret
+		}
+		i++
+	}
+	return nil
 }
 
 func evalFunction(

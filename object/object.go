@@ -73,3 +73,11 @@ func (a *attributeStore) get(object Object, name string) Object {
 	}
 	return nil
 }
+
+type Iterator interface {
+	Next() (*TwoReturnValue, *Error)
+}
+
+type Iterable interface {
+	Iter() Iterator
+}

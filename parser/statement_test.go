@@ -632,6 +632,50 @@ while (1) {
 	}
 }
 
+func TestForInStatement(t *testing.T) {
+	input := `
+for (i, a in b) {}
+`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ForInStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.WhileStatement. got=%T",
+			program.Statements[0])
+	}
+
+	if stmt.TokenLiteral() != "for" {
+		t.Fatalf("expected for, but got=%s", stmt.TokenLiteral())
+	}
+
+	if !testIdentifier(t, stmt.First, "i") {
+		return
+	}
+
+	if !testIdentifier(t, stmt.Second, "a") {
+		return
+	}
+
+	if !testIdentifier(t, stmt.Expr, "b") {
+		return
+	}
+
+	if len(stmt.Body.Statements) > 0 {
+		t.Fatalf("expected zero statement, but got=%d", len(stmt.Body.Statements))
+	}
+}
+
 func TestWeiExportStatements(t *testing.T) {
 	tests := []struct {
 		input         string
