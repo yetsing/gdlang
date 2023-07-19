@@ -12,12 +12,15 @@ const (
 	STRING_OBJ               = "str"
 	BUILTIN_OBJ              = "builtin"
 	LIST_OBJ                 = "list"
+	LIST_ITERATOR_OBJ        = "list_iterator"
 	DICT_OBJ                 = "dict"
+	DICT_ITERATOR_OBJ        = "dict_iterator"
 	CONTINUE_VALUE_OBJ       = "continue_value"
 	BREAK_VALUE_OBJ          = "break_value"
 	BUILTIN_METHOD_OBJ       = "builtin_method"
 	BOUND_BUILTIN_METHOD_OBJ = "bound_builtin_method"
 	MODULE_OBJ               = "module"
+	TUPLE_OBJ                = "tuple"
 	WEI_OBJ                  = "wei"
 )
 
@@ -75,7 +78,7 @@ func (a *attributeStore) get(object Object, name string) Object {
 }
 
 type Iterator interface {
-	Next() (*TwoReturnValue, *Error)
+	Next() Object
 }
 
 type Iterable interface {

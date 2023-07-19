@@ -56,6 +56,10 @@ func (d *Dict) SetItem(key, value Object) Object {
 	return nil
 }
 
+func (d *Dict) Iter() Iterator {
+	return NewDictIterator(d)
+}
+
 func (d *Dict) GetAttribute(name string) Object {
 	ret := d.attributeStore.get(d, name)
 	if ret != nil {

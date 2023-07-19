@@ -79,29 +79,8 @@ func (l *List) SetItem(index, value Object) Object {
 	return nil
 }
 
-type ListIterator struct {
-	l     *List
-	index int
-}
-
-func (li *ListIterator) Next() (*TwoReturnValue, *Error) {
-	length := len(li.l.Elements)
-	if li.index == length {
-		return nil, StopIteration
-	}
-	val := li.l.Elements[li.index]
-	li.index++
-	return &TwoReturnValue{
-		First:  val,
-		Second: nil,
-	}, nil
-}
-
 func (l *List) Iter() Iterator {
-	return &ListIterator{
-		l:     l,
-		index: 0,
-	}
+	return NewListIterator(l)
 }
 
 func (l *List) GetAttribute(name string) Object {

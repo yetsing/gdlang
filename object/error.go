@@ -14,6 +14,10 @@ func NewError(format string, a ...interface{}) *Error {
 	return &Error{Message: fmt.Sprintf(format, a...)}
 }
 
+func WrongNumberUnpack(got, want int) *Error {
+	return NewError("unpack got=%d, want=%d", got, want)
+}
+
 func WrongNumberArgument(got, want int) *Error {
 	return NewError("wrong number of arguments. got=%d, want=%d", got, want)
 }

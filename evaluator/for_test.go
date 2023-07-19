@@ -24,14 +24,15 @@ n = n + i + e
 }
 n`, 9,
 			false},
-		//		{`
-		//var m = {0:1, 1:2, 2:3}
-		//var n = 0
-		//for (i, e in m) {
-		//n = n + i + e
-		//}
-		//n`, 9,
-		//			false},
+		{`
+		var m = {0:1, 1:2, 2:3}
+		var n = 0
+		for (i, e in m) {
+        print('n', n, 'i', i, 'e', e)
+		n = n + i + e
+		}
+		n`, 9,
+			false},
 	}
 
 	for _, tt := range tests {

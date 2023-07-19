@@ -324,26 +324,21 @@ func evalForInStatement(
 	enclosedEnv := object.NewEnclosedEnvironment(env)
 	firstName := forInStmt.First.Value
 	secondName := forInStmt.Second.Value
-	i := int64(0)
 	for {
-		valObj, errObj := iterator.Next()
-		if errObj == object.StopIteration {
+		nextVal := iterator.Next()
+		if nextVal == object.StopIteration {
 			break
 		}
-		if valObj.Second == nil {
-			// 返回了一个值
-			enclosedEnv.Pass(firstName, object.NewInteger(i))
-			enclosedEnv.Pass(secondName, valObj.First)
-		} else {
-			// 返回了两个值
-			enclosedEnv.Pass(firstName, valObj.First)
-			enclosedEnv.Pass(secondName, valObj.Second)
+		tupleVal, ok := nextVal.(*object.Tuple)
+		if !ok {
+			return object.WrongNumberUnpack(1, 2)
 		}
+		enclosedEnv.Pass(firstName, tupleVal.Elements[0])
+		enclosedEnv.Pass(secondName, tupleVal.Elements[1])
 		ret := Eval(ctx, forInStmt.Body, enclosedEnv)
 		if IsError(ret) {
 			return ret
 		}
-		i++
 	}
 	return nil
 }

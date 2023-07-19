@@ -89,6 +89,25 @@ func recursiveEqual(a, b Object, visited map[Object]bool) bool {
 // objectString 递归地将对象转化为字符串
 func objectString(obj Object, visited map[Object]bool) string {
 	switch obj := obj.(type) {
+	case *Tuple:
+		// 对象已经访问过了，直接返回，防止无限递归
+		if _, ok := visited[obj]; ok {
+			return "(...)"
+		}
+		visited[obj] = true
+
+		var out bytes.Buffer
+
+		var elements []string
+		for _, e := range obj.Elements {
+			es := objectString(e, visited)
+			elements = append(elements, es)
+		}
+
+		out.WriteString("(")
+		out.WriteString(strings.Join(elements, ", "))
+		out.WriteString(")")
+		return out.String()
 	case *List:
 		// 对象已经访问过了，直接返回，防止无限递归
 		if _, ok := visited[obj]; ok {
