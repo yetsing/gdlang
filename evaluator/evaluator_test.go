@@ -8,6 +8,7 @@ import (
 )
 
 func testEval(t *testing.T, input string) object.Object {
+	t.Helper()
 	l := lexer.New(input)
 	p := parser.New(l)
 	program, err := p.ParseProgram()

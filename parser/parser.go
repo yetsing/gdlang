@@ -181,30 +181,41 @@ func (p *Parser) statement() (ast.Statement, error) {
 	}
 }
 
-// for_in_statement ::= "for" "(" IDENT "," IDENT "in" expression ")" block_statement  (";" | NEWLINE)
+// for_in_statement ::= "for" "(" ("var" | "con") IDENT ("," IDENT)* "in" expression ")" block_statement  (";" | NEWLINE)
 func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 	tk := p.currToken
 	err := p.eatContinuously(token.FOR, token.LPAREN)
 	if err != nil {
 		return nil, err
 	}
-	first := &ast.Identifier{
+	con := p.currTokenIs(token.CON)
+	err = p.eatIn(token.VAR, token.CON)
+	if err != nil {
+		return nil, err
+	}
+	var targets []*ast.Identifier
+	target := &ast.Identifier{
 		Token: p.currToken,
 		Value: p.currToken.Literal,
 	}
+	targets = append(targets, target)
 	err = p.eat(token.IDENT)
 	if err != nil {
 		return nil, err
 	}
-	err = p.eat(token.COMMA)
-	if err != nil {
-		return nil, err
+	for p.currTokenIs(token.COMMA) {
+		p.nextToken()
+		target = &ast.Identifier{
+			Token: p.currToken,
+			Value: p.currToken.Literal,
+		}
+		targets = append(targets, target)
+		err = p.eat(token.IDENT)
+		if err != nil {
+			return nil, err
+		}
 	}
-	second := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
-	err = p.eatContinuously(token.IDENT, token.IN)
+	err = p.eat(token.IN)
 	if err != nil {
 		return nil, err
 	}
@@ -224,11 +235,11 @@ func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.ForInStatement{
-		Token:  tk,
-		First:  first,
-		Second: second,
-		Expr:   expr,
-		Body:   body,
+		Token:   tk,
+		Con:     con,
+		Targets: targets,
+		Expr:    expr,
+		Body:    body,
 	}
 	return stmt, nil
 }

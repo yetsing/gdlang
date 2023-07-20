@@ -2,7 +2,6 @@ package ast
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"weilang/token"
 )
@@ -213,24 +212,34 @@ func (b *BreakStatement) String() string {
 }
 
 type ForInStatement struct {
-	Token  token.Token
-	First  *Identifier
-	Second *Identifier
-	Expr   Expression
-	Body   *BlockStatement
+	Token   token.Token
+	Con     bool
+	Targets []*Identifier
+	Expr    Expression
+	Body    *BlockStatement
 }
 
 func (f *ForInStatement) statementNode()       {}
 func (f *ForInStatement) TokenLiteral() string { return f.Token.Literal }
 func (f *ForInStatement) String() string {
-	s := fmt.Sprintf(
-		"for (%s, %s in %s) %s",
-		f.First.String(),
-		f.Second.String(),
-		f.Expr.String(),
-		f.Body.String(),
-	)
-	return s
+	var out bytes.Buffer
+
+	out.WriteString("for (")
+	if f.Con {
+		out.WriteString("con ")
+	} else {
+		out.WriteString("var ")
+	}
+	var elements []string
+	for _, target := range f.Targets {
+		elements = append(elements, target.String())
+	}
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("in ")
+	out.WriteString(f.Expr.String())
+	out.WriteString(") ")
+	out.WriteString(f.Body.String())
+	return out.String()
 }
 
 type WeiExportStatement struct {

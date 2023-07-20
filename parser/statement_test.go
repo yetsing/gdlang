@@ -634,7 +634,7 @@ while (1) {
 
 func TestForInStatement(t *testing.T) {
 	input := `
-for (i, a in b) {}
+for (var i, a in b) {}
 `
 
 	l := lexer.New(input)
@@ -659,11 +659,19 @@ for (i, a in b) {}
 		t.Fatalf("expected for, but got=%s", stmt.TokenLiteral())
 	}
 
-	if !testIdentifier(t, stmt.First, "i") {
+	if stmt.Con {
+		t.Fatalf("expected var, but got con")
+	}
+
+	if len(stmt.Targets) != 2 {
+		t.Fatalf("expected 2 targets, but got %d", len(stmt.Targets))
+	}
+
+	if !testIdentifier(t, stmt.Targets[0], "i") {
 		return
 	}
 
-	if !testIdentifier(t, stmt.Second, "a") {
+	if !testIdentifier(t, stmt.Targets[1], "a") {
 		return
 	}
 

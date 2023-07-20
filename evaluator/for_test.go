@@ -11,7 +11,7 @@ func TestForInStatements(t *testing.T) {
 		{`
 var m = 1
 var n = 0
-for (i, e in m) {
+for (var i, e in m) {
 n = n + e
 }
 n`, "'int' object is not iterable",
@@ -19,7 +19,15 @@ n`, "'int' object is not iterable",
 		{`
 var m = [1, 2, 3]
 var n = 0
-for (i, e in m) {
+for (con e in m) {
+n = n + i + e
+}
+n`, "unpack got=2, want=1",
+			true},
+		{`
+var m = [1, 2, 3]
+var n = 0
+for (con i, e in m) {
 n = n + i + e
 }
 n`, 9,
@@ -27,8 +35,7 @@ n`, 9,
 		{`
 		var m = {0:1, 1:2, 2:3}
 		var n = 0
-		for (i, e in m) {
-        print('n', n, 'i', i, 'e', e)
+		for (con i, e in m) {
 		n = n + i + e
 		}
 		n`, 9,

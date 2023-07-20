@@ -321,20 +321,28 @@ func evalForInStatement(
 		return object.NewError("'%s' object is not iterable", obj.Type())
 	}
 	iterator := iterable.Iter()
-	enclosedEnv := object.NewEnclosedEnvironment(env)
-	firstName := forInStmt.First.Value
-	secondName := forInStmt.Second.Value
 	for {
+		enclosedEnv := object.NewEnclosedEnvironment(env)
 		nextVal := iterator.Next()
 		if nextVal == object.StopIteration {
 			break
 		}
-		tupleVal, ok := nextVal.(*object.Tuple)
-		if !ok {
-			return object.WrongNumberUnpack(1, 2)
+		if IsError(nextVal) {
+			return nextVal
 		}
-		enclosedEnv.Pass(firstName, tupleVal.Elements[0])
-		enclosedEnv.Pass(secondName, tupleVal.Elements[1])
+		var values []object.Object
+		switch nextVal := nextVal.(type) {
+		case *object.Tuple:
+			values = append(values, nextVal.Elements...)
+		default:
+			values = append(values, nextVal)
+		}
+		if len(forInStmt.Targets) != len(values) {
+			return object.WrongNumberUnpack(len(values), len(forInStmt.Targets))
+		}
+		for i, target := range forInStmt.Targets {
+			enclosedEnv.Add(target.Value, values[i], forInStmt.Con)
+		}
 		ret := Eval(ctx, forInStmt.Body, enclosedEnv)
 		if IsError(ret) {
 			return ret
