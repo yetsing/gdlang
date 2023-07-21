@@ -72,7 +72,8 @@ func (p *Parser) ParseProgram() (*ast.Program, error) {
 
 // program ::= (statement)* EOF
 func (p *Parser) program() (*ast.Program, error) {
-	program := &ast.Program{}
+	location := p.currFileLocation()
+	program := &ast.Program{Location: location}
 	program.Statements = []ast.Statement{}
 
 	for !p.currTokenIs(token.EOF) {
@@ -96,11 +97,12 @@ func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 	p.skipNewline()
 
 	tok := p.currToken
+	location := p.currFileLocation()
 	err := p.eat(token.LBRACE)
 	if err != nil {
 		return nil, err
 	}
-	block := &ast.BlockStatement{Token: tok}
+	block := &ast.BlockStatement{Location: location, Token: tok}
 	// 处理空的语句块的情况，例如 "if (1) {}"
 	p.skipNewline()
 
@@ -184,6 +186,7 @@ func (p *Parser) statement() (ast.Statement, error) {
 // for_in_statement ::= "for" "(" ("var" | "con") IDENT ("," IDENT)* "in" expression ")" block_statement  (";" | NEWLINE)
 func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 	tk := p.currToken
+	location := p.currFileLocation()
 	err := p.eatContinuously(token.FOR, token.LPAREN)
 	if err != nil {
 		return nil, err
@@ -194,23 +197,15 @@ func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 		return nil, err
 	}
 	var targets []*ast.Identifier
-	target := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
+	target, err := p.ident()
 	targets = append(targets, target)
-	err = p.eat(token.IDENT)
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIs(token.COMMA) {
 		p.nextToken()
-		target = &ast.Identifier{
-			Token: p.currToken,
-			Value: p.currToken.Literal,
-		}
+		target, err = p.ident()
 		targets = append(targets, target)
-		err = p.eat(token.IDENT)
 		if err != nil {
 			return nil, err
 		}
@@ -235,11 +230,12 @@ func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.ForInStatement{
-		Token:   tk,
-		Con:     con,
-		Targets: targets,
-		Expr:    expr,
-		Body:    body,
+		Location: location,
+		Token:    tk,
+		Con:      con,
+		Targets:  targets,
+		Expr:     expr,
+		Body:     body,
 	}
 	return stmt, nil
 }
@@ -247,6 +243,7 @@ func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 // wei_export_statement ::= "wei" "." "export" "(" [wei_export_args] ")"
 // wei_export_args      ::= IDENT (,IDENT)*
 func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
+	location := p.currFileLocation()
 	tk := p.currToken
 	err := p.eat(token.WEI)
 	if err != nil {
@@ -273,12 +270,8 @@ func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
 	// 解析参数
 	var names []*ast.Identifier
 	if p.currTokenIs(token.IDENT) {
-		name := &ast.Identifier{
-			Token: p.currToken,
-			Value: p.currToken.Literal,
-		}
+		name, _ := p.ident()
 		names = append(names, name)
-		p.nextToken()
 	}
 	for p.currTokenIs(token.COMMA) {
 		p.nextToken()
@@ -286,12 +279,8 @@ func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
 		if p.currTokenIs(token.RPAREN) {
 			break
 		}
-		name := &ast.Identifier{
-			Token: p.currToken,
-			Value: p.currToken.Literal,
-		}
+		name, err := p.ident()
 		names = append(names, name)
-		err = p.eat(token.IDENT)
 		if err != nil {
 			return nil, err
 		}
@@ -304,24 +293,22 @@ func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
 	}
 
 	stmt := &ast.WeiExportStatement{
-		Token: tk,
-		Names: names,
+		Location: location,
+		Token:    tk,
+		Names:    names,
 	}
 	return stmt, nil
 }
 
 // var_statement ::= "var" IDENT "=" expression (";" | NEWLINE)
 func (p *Parser) varStatement() (*ast.VarStatement, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.VAR)
 	if err != nil {
 		return nil, err
 	}
-	name := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
-	err = p.eat(token.IDENT)
+	name, err := p.ident()
 	if err != nil {
 		return nil, err
 	}
@@ -337,25 +324,23 @@ func (p *Parser) varStatement() (*ast.VarStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	varStmt := &ast.VarStatement{
-		Token: tok,
-		Name:  name,
-		Value: expr,
+		Location: location,
+		Token:    tok,
+		Name:     name,
+		Value:    expr,
 	}
 	return varStmt, nil
 }
 
 // con_statement ::= "con" IDENT "=" expression (";" | NEWLINE)
 func (p *Parser) conStatement() (*ast.ConStatement, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.CON)
 	if err != nil {
 		return nil, err
 	}
-	name := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
-	err = p.eat(token.IDENT)
+	name, err := p.ident()
 	if err != nil {
 		return nil, err
 	}
@@ -371,15 +356,17 @@ func (p *Parser) conStatement() (*ast.ConStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.ConStatement{
-		Token: tok,
-		Name:  name,
-		Value: expr,
+		Location: location,
+		Token:    tok,
+		Name:     name,
+		Value:    expr,
 	}
 	return stmt, nil
 }
 
 // return_statement ::= "return" ( expression ) (";" | NEWLINE)
 func (p *Parser) returnStatement() (*ast.ReturnStatement, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.RETURN)
 	if err != nil {
@@ -396,6 +383,7 @@ func (p *Parser) returnStatement() (*ast.ReturnStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.ReturnStatement{
+		Location:    location,
 		Token:       tok,
 		ReturnValue: expr,
 	}
@@ -406,6 +394,7 @@ func (p *Parser) returnStatement() (*ast.ReturnStatement, error) {
 //
 // assign_statement ::= primary "=" expression (";" | NEWLINE)
 func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	left, err := p.primary()
 	if err != nil {
@@ -423,9 +412,10 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.AssignStatement{
-		Token: tok,
-		Left:  left,
-		Value: expr,
+		Location: location,
+		Token:    tok,
+		Left:     left,
+		Value:    expr,
 	}
 	return stmt, nil
 }
@@ -437,17 +427,16 @@ func (p *Parser) assignStatement() (*ast.AssignStatement, error) {
 // attribute        ::= "." IDENT
 func (p *Parser) primary() (ast.Expression, error) {
 	tok := p.currToken
-	err := p.eat(token.IDENT)
+	var expr ast.Expression
+	expr, err := p.ident()
 	if err != nil {
 		return nil, err
 	}
-	var expr ast.Expression
-	expr = &ast.Identifier{Token: tok, Value: tok.Literal}
 	for p.currTokenIn(token.LBRACKET, token.DOT) {
 		tok = p.currToken
 		switch p.currToken.Type {
 		case token.LBRACKET:
-			_ = p.eat(token.LBRACKET)
+			p.nextToken()
 			index, err := p.expression()
 			if err != nil {
 				return nil, err
@@ -462,12 +451,8 @@ func (p *Parser) primary() (ast.Expression, error) {
 				return nil, err
 			}
 		case token.DOT:
-			_ = p.eat(token.DOT)
-			ident := &ast.Identifier{
-				Token: p.currToken,
-				Value: p.currToken.Literal,
-			}
-			err = p.eat(token.IDENT)
+			p.nextToken()
+			ident, err := p.ident()
 			if err != nil {
 				return nil, err
 			}
@@ -981,12 +966,8 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 				return nil, err
 			}
 		case token.DOT:
-			_ = p.eat(token.DOT)
-			ident := &ast.Identifier{
-				Token: p.currToken,
-				Value: p.currToken.Literal,
-			}
-			err = p.eat(token.IDENT)
+			p.nextToken()
+			ident, err := p.ident()
 			if err != nil {
 				return nil, err
 			}
@@ -1027,8 +1008,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 	var err error
 	switch p.currToken.Type {
 	case token.IDENT:
-		expr = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
-		_ = p.eat(token.IDENT)
+		return p.ident()
 	case token.INT:
 		var n int64
 		literal := p.currToken.Literal
@@ -1276,8 +1256,7 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 	var param *ast.Identifier
 	var err error
 	if !p.currTokenIs(token.RPAREN) {
-		param = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
-		err = p.eat(token.IDENT)
+		param, err = p.ident()
 		if err != nil {
 			return nil, err
 		}
@@ -1289,8 +1268,7 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 		if !p.currTokenIs(token.IDENT) {
 			break
 		}
-		param = &ast.Identifier{Token: p.currToken, Value: p.currToken.Literal}
-		err = p.eat(token.IDENT)
+		param, err = p.ident()
 		if err != nil {
 			return nil, err
 		}
@@ -1302,7 +1280,7 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 	return parameters, nil
 }
 
-// wei_expression ::= ( "wei" "." IDENT ) | ( "wei" "." "import" "(" expression ")" )
+// wei_expression ::= ( "wei" "." IDENT ) | ( "wei" "." "import" "(" STRING_LIT ")" )
 func (p *Parser) weiExpression() (ast.Expression, error) {
 	tk := p.currToken
 	err := p.eat(token.WEI)
@@ -1319,7 +1297,8 @@ func (p *Parser) weiExpression() (ast.Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		name, err := p.expression()
+		filename := p.currToken.Literal
+		err = p.eat(token.STRING)
 		if err != nil {
 			return nil, err
 		}
@@ -1329,15 +1308,11 @@ func (p *Parser) weiExpression() (ast.Expression, error) {
 		}
 		expr := &ast.WeiImportExpression{
 			Token:    tk,
-			Filename: name,
+			Filename: filename,
 		}
 		return expr, nil
 	}
-	attribute := &ast.Identifier{
-		Token: p.currToken,
-		Value: p.currToken.Literal,
-	}
-	err = p.eat(token.IDENT)
+	attribute, err := p.ident()
 	if err != nil {
 		return nil, err
 	}
@@ -1346,6 +1321,19 @@ func (p *Parser) weiExpression() (ast.Expression, error) {
 		Attribute: attribute,
 	}
 	return expr, nil
+}
+
+func (p *Parser) ident() (*ast.Identifier, error) {
+	identifier := &ast.Identifier{
+		Location: p.currFileLocation(),
+		Token:    p.currToken,
+		Value:    p.currToken.Literal,
+	}
+	err := p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	return identifier, nil
 }
 
 func (p *Parser) eatIn(ts ...token.TokenType) error {
@@ -1436,6 +1424,10 @@ func (p *Parser) currTokenIs(t token.TokenType) bool {
 
 func (p *Parser) currTokenNotIs(t token.TokenType) bool {
 	return p.currToken.TypeNotIs(t)
+}
+
+func (p *Parser) currFileLocation() *ast.FileLocation {
+	return ast.NewFileLocation(p.filename, p.currToken.Start.Line)
 }
 
 func (p *Parser) peekTokenIs(t token.TokenType) bool {

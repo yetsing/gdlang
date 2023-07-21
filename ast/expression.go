@@ -12,6 +12,7 @@ import (
 
 // UnaryExpression 一元操作表达式
 type UnaryExpression struct {
+	Location *FileLocation
 	Token    token.Token // The prefix token, e.g. !
 	Operator string
 	Operand  Expression
@@ -29,9 +30,13 @@ func (pe *UnaryExpression) String() string {
 
 	return out.String()
 }
+func (pe *UnaryExpression) GetFileLocation() *FileLocation {
+	return pe.Location
+}
 
 // BinaryOpExpression 二元操作表达式，如 "1 + 2"
 type BinaryOpExpression struct {
+	Location *FileLocation
 	Token    token.Token
 	Left     Expression
 	Operator string
@@ -51,11 +56,15 @@ func (be *BinaryOpExpression) String() string {
 
 	return out.String()
 }
+func (be *BinaryOpExpression) GetFileLocation() *FileLocation {
+	return be.Location
+}
 
 type SubscriptionExpression struct {
-	Token token.Token
-	Left  Expression
-	Index Expression
+	Location *FileLocation
+	Token    token.Token
+	Left     Expression
+	Index    Expression
 }
 
 func (se *SubscriptionExpression) expressionNode()      {}
@@ -71,8 +80,12 @@ func (se *SubscriptionExpression) String() string {
 
 	return out.String()
 }
+func (se *SubscriptionExpression) GetFileLocation() *FileLocation {
+	return se.Location
+}
 
 type AttributeExpression struct {
+	Location  *FileLocation
 	Token     token.Token
 	Left      Expression
 	Attribute *Identifier
@@ -91,8 +104,12 @@ func (ae *AttributeExpression) String() string {
 
 	return out.String()
 }
+func (ae *AttributeExpression) GetFileLocation() *FileLocation {
+	return ae.Location
+}
 
 type CallExpression struct {
+	Location  *FileLocation
 	Token     token.Token
 	Function  Expression
 	Arguments []Expression
@@ -115,8 +132,12 @@ func (ce *CallExpression) String() string {
 
 	return out.String()
 }
+func (ce *CallExpression) GetFileLocation() *FileLocation {
+	return ce.Location
+}
 
 type FunctionLiteral struct {
+	Location   *FileLocation
 	Token      token.Token // The 'fn' token
 	Parameters []*Identifier
 	Body       *BlockStatement
@@ -140,8 +161,12 @@ func (fl *FunctionLiteral) String() string {
 
 	return out.String()
 }
+func (fl *FunctionLiteral) GetFileLocation() *FileLocation {
+	return fl.Location
+}
 
 type ListLiteral struct {
+	Location *FileLocation
 	Token    token.Token // the '[' token
 	Elements []Expression
 }
@@ -162,10 +187,14 @@ func (al *ListLiteral) String() string {
 
 	return out.String()
 }
+func (al *ListLiteral) GetFileLocation() *FileLocation {
+	return al.Location
+}
 
 type DictLiteral struct {
-	Token token.Token // the '{' token
-	Pairs map[Expression]Expression
+	Location *FileLocation
+	Token    token.Token // the '{' token
+	Pairs    map[Expression]Expression
 }
 
 func (hl *DictLiteral) expressionNode()      {}
@@ -184,52 +213,76 @@ func (hl *DictLiteral) String() string {
 
 	return out.String()
 }
+func (hl *DictLiteral) GetFileLocation() *FileLocation {
+	return hl.Location
+}
 
 type Identifier struct {
-	Token token.Token // the token.IDENT token
-	Value string
+	Location *FileLocation
+	Token    token.Token // the token.IDENT token
+	Value    string
 }
 
 func (i *Identifier) expressionNode()      {}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
 func (i *Identifier) String() string       { return i.Value }
+func (i *Identifier) GetFileLocation() *FileLocation {
+	return i.Location
+}
 
 type Boolean struct {
-	Token token.Token
-	Value bool
+	Location *FileLocation
+	Token    token.Token
+	Value    bool
 }
 
 func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
+func (b *Boolean) GetFileLocation() *FileLocation {
+	return b.Location
+}
 
 type NullLiteral struct {
-	Token token.Token
+	Location *FileLocation
+	Token    token.Token
 }
 
 func (n *NullLiteral) expressionNode()      {}
 func (n *NullLiteral) TokenLiteral() string { return n.Token.Literal }
 func (n *NullLiteral) String() string       { return n.Token.Literal }
+func (n *NullLiteral) GetFileLocation() *FileLocation {
+	return n.Location
+}
 
 type IntegerLiteral struct {
-	Token token.Token
-	Value int64
+	Location *FileLocation
+	Token    token.Token
+	Value    int64
 }
 
 func (il *IntegerLiteral) expressionNode()      {}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
+func (il *IntegerLiteral) GetFileLocation() *FileLocation {
+	return il.Location
+}
 
 type StringLiteral struct {
-	Token token.Token
-	Value string
+	Location *FileLocation
+	Token    token.Token
+	Value    string
 }
 
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 func (sl *StringLiteral) String() string       { return sl.Token.Literal }
+func (sl *StringLiteral) GetFileLocation() *FileLocation {
+	return sl.Location
+}
 
 type WeiAttributeExpression struct {
+	Location  *FileLocation
 	Token     token.Token
 	Attribute *Identifier
 }
@@ -239,10 +292,14 @@ func (wa *WeiAttributeExpression) TokenLiteral() string { return wa.Token.Litera
 func (wa *WeiAttributeExpression) String() string {
 	return fmt.Sprintf("(wei.%s)", wa.Attribute.String())
 }
+func (wa *WeiAttributeExpression) GetFileLocation() *FileLocation {
+	return wa.Location
+}
 
 type WeiImportExpression struct {
+	Location *FileLocation
 	Token    token.Token
-	Filename Expression
+	Filename string
 }
 
 func (w *WeiImportExpression) expressionNode() {}
@@ -250,5 +307,8 @@ func (w *WeiImportExpression) TokenLiteral() string {
 	return w.Token.Literal
 }
 func (w *WeiImportExpression) String() string {
-	return fmt.Sprintf("(wei.import(%s))", w.Filename.String())
+	return fmt.Sprintf("(wei.import(%s))", w.Filename)
+}
+func (w *WeiImportExpression) GetFileLocation() *FileLocation {
+	return w.Location
 }

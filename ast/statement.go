@@ -7,9 +7,10 @@ import (
 )
 
 type VarStatement struct {
-	Token token.Token
-	Name  *Identifier
-	Value Expression
+	Location *FileLocation
+	Token    token.Token
+	Name     *Identifier
+	Value    Expression
 }
 
 func (vs *VarStatement) statementNode()       {}
@@ -27,11 +28,15 @@ func (vs *VarStatement) String() string {
 
 	return out.String()
 }
+func (vs *VarStatement) GetFileLocation() *FileLocation {
+	return vs.Location
+}
 
 type ConStatement struct {
-	Token token.Token
-	Name  *Identifier
-	Value Expression
+	Location *FileLocation
+	Token    token.Token
+	Name     *Identifier
+	Value    Expression
 }
 
 func (cs *ConStatement) statementNode()       {}
@@ -49,11 +54,15 @@ func (cs *ConStatement) String() string {
 
 	return out.String()
 }
+func (cs *ConStatement) GetFileLocation() *FileLocation {
+	return cs.Location
+}
 
 type AssignStatement struct {
-	Token token.Token
-	Left  Expression
-	Value Expression
+	Location *FileLocation
+	Token    token.Token
+	Left     Expression
+	Value    Expression
 }
 
 func (as *AssignStatement) statementNode()       {}
@@ -70,8 +79,12 @@ func (as *AssignStatement) String() string {
 
 	return out.String()
 }
+func (as *AssignStatement) GetFileLocation() *FileLocation {
+	return as.Location
+}
 
 type ReturnStatement struct {
+	Location    *FileLocation
 	Token       token.Token // the 'return' token
 	ReturnValue Expression
 }
@@ -91,8 +104,12 @@ func (rs *ReturnStatement) String() string {
 
 	return out.String()
 }
+func (rs *ReturnStatement) GetFileLocation() *FileLocation {
+	return rs.Location
+}
 
 type ExpressionStatement struct {
+	Location   *FileLocation
 	Token      token.Token // the first token of the expression
 	Expression Expression
 }
@@ -105,8 +122,12 @@ func (es *ExpressionStatement) String() string {
 	}
 	return ""
 }
+func (es *ExpressionStatement) GetFileLocation() *FileLocation {
+	return es.Location
+}
 
 type BlockStatement struct {
+	Location   *FileLocation
 	Token      token.Token // the { token
 	Statements []Statement
 }
@@ -125,8 +146,12 @@ func (bs *BlockStatement) String() string {
 
 	return out.String()
 }
+func (bs *BlockStatement) GetFileLocation() *FileLocation {
+	return bs.Location
+}
 
 type IfBranch struct {
+	Location *FileLocation
 	// Token "if" token
 	Condition Expression
 	Body      *BlockStatement
@@ -144,6 +169,7 @@ func (i *IfBranch) String() string {
 }
 
 type IfStatement struct {
+	Location *FileLocation
 	// Token "if" token
 	Token token.Token
 	// Cases 对应多个 "if" "else if" 等多个条件分支
@@ -169,8 +195,12 @@ func (is *IfStatement) String() string {
 
 	return out.String()
 }
+func (is *IfStatement) GetFileLocation() *FileLocation {
+	return is.Location
+}
 
 type WhileStatement struct {
+	Location *FileLocation
 	// Token "while" token
 	Token     token.Token
 	Condition Expression
@@ -190,9 +220,13 @@ func (ws *WhileStatement) String() string {
 
 	return out.String()
 }
+func (ws *WhileStatement) GetFileLocation() *FileLocation {
+	return ws.Location
+}
 
 type ContinueStatement struct {
-	Token token.Token
+	Location *FileLocation
+	Token    token.Token
 }
 
 func (c *ContinueStatement) statementNode()       {}
@@ -200,9 +234,13 @@ func (c *ContinueStatement) TokenLiteral() string { return c.Token.Literal }
 func (c *ContinueStatement) String() string {
 	return "continue"
 }
+func (c *ContinueStatement) GetFileLocation() *FileLocation {
+	return c.Location
+}
 
 type BreakStatement struct {
-	Token token.Token
+	Location *FileLocation
+	Token    token.Token
 }
 
 func (b *BreakStatement) statementNode()       {}
@@ -210,13 +248,17 @@ func (b *BreakStatement) TokenLiteral() string { return b.Token.Literal }
 func (b *BreakStatement) String() string {
 	return "break"
 }
+func (b *BreakStatement) GetFileLocation() *FileLocation {
+	return b.Location
+}
 
 type ForInStatement struct {
-	Token   token.Token
-	Con     bool
-	Targets []*Identifier
-	Expr    Expression
-	Body    *BlockStatement
+	Location *FileLocation
+	Token    token.Token
+	Con      bool
+	Targets  []*Identifier
+	Expr     Expression
+	Body     *BlockStatement
 }
 
 func (f *ForInStatement) statementNode()       {}
@@ -241,10 +283,14 @@ func (f *ForInStatement) String() string {
 	out.WriteString(f.Body.String())
 	return out.String()
 }
+func (f *ForInStatement) GetFileLocation() *FileLocation {
+	return f.Location
+}
 
 type WeiExportStatement struct {
-	Token token.Token
-	Names []*Identifier
+	Location *FileLocation
+	Token    token.Token
+	Names    []*Identifier
 }
 
 func (w *WeiExportStatement) statementNode() {
@@ -266,4 +312,7 @@ func (w *WeiExportStatement) String() string {
 	out.WriteString(strings.Join(names, ","))
 	out.WriteString(")")
 	return out.String()
+}
+func (w *WeiExportStatement) GetFileLocation() *FileLocation {
+	return w.Location
 }

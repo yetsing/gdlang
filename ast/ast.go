@@ -4,13 +4,27 @@ import (
 	"bytes"
 )
 
+type FileLocation struct {
+	Filename string
+	Lineno   int
+}
+
+func NewFileLocation(filename string, lineno int) *FileLocation {
+	return &FileLocation{
+		Filename: filename,
+		Lineno:   lineno,
+	}
+}
+
 // The base Node interface
 type Node interface {
+	GetFileLocation() *FileLocation
 	TokenLiteral() string
 	String() string
 }
 
 type Program struct {
+	Location   *FileLocation
 	Statements []Statement
 }
 
@@ -30,6 +44,9 @@ func (p *Program) String() string {
 	}
 
 	return out.String()
+}
+func (p *Program) GetFileLocation() *FileLocation {
+	return p.Location
 }
 
 // All statement nodes implement this

@@ -866,7 +866,10 @@ func TestWeiImportExpression(t *testing.T) {
 			t.Errorf("want WeiImportExpression, but got=%T", stmt.Value)
 			t.FailNow()
 		}
-		testStringLiteral(t, weiImport.Filename, tt.expected)
+		if weiImport.Filename != tt.expected {
+			t.Errorf("expected %q, but got %q", tt.expected, weiImport.Filename)
+			t.FailNow()
+		}
 	}
 }
 
