@@ -3,6 +3,7 @@ package repl
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"weilang/ast"
@@ -22,7 +23,8 @@ var PROMPT = START_PROMPT
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 	mod := object.NewModule("")
-	ctx := evaluator.NewModuleContext(mod)
+	state := evaluator.NewWeiState(mod)
+	ctx := context.Background()
 
 	var buffer bytes.Buffer
 	for {
@@ -45,7 +47,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		evaluated := evaluator.Eval(ctx, program, mod.GetEnv())
+		evaluated := evaluator.Eval(ctx, state, program, mod.GetEnv())
 		if evaluated != nil {
 			if !evaluator.IsError(evaluated) {
 				n := len(program.Statements)

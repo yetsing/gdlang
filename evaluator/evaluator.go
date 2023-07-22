@@ -2,7 +2,6 @@ package evaluator
 
 import (
 	"context"
-	"fmt"
 	"github.com/thinkeridea/go-extend/exunicode/exutf8"
 	"weilang/ast"
 	"weilang/object"
@@ -10,46 +9,54 @@ import (
 
 func Eval(
 	ctx context.Context,
+	state *WeiState,
 	node ast.Node,
 	env *object.Environment,
 ) object.Object {
+	state.UpdateLocation(node)
 	switch node := node.(type) {
 
 	// 语句
 	case *ast.Program:
-		return evalProgram(ctx, node, env)
+		return evalProgram(ctx, state, node, env)
 
 	case *ast.BlockStatement:
-		return evalBlockStatements(ctx, node, env)
+		return evalBlockStatements(ctx, state, node, env)
 
 	case *ast.VarStatement:
-		val := Eval(ctx, node.Value, env)
+		val := Eval(ctx, state, node.Value, env)
 		if IsError(val) {
 			return val
 		}
+		// 更新到赋值操作所在的行号
+		state.UpdateLocation(node)
 		ret := env.Add(node.Name.Value, val, false)
 		if IsError(ret) {
+			state.HandleError(ret)
 			return ret
 		}
 
 	case *ast.ConStatement:
-		val := Eval(ctx, node.Value, env)
+		val := Eval(ctx, state, node.Value, env)
 		if IsError(val) {
 			return val
 		}
+		// 更新到赋值操作所在的行号
+		state.UpdateLocation(node)
 		ret := env.Add(node.Name.Value, val, true)
 		if IsError(ret) {
+			state.HandleError(ret)
 			return ret
 		}
 
 	case *ast.AssignStatement:
-		return evalAssignStatement(ctx, node, env)
+		return evalAssignStatement(ctx, state, node, env)
 
 	case *ast.IfStatement:
-		return evalIfStatement(ctx, node, env)
+		return evalIfStatement(ctx, state, node, env)
 
 	case *ast.WhileStatement:
-		return evalWhileStatement(ctx, node, env)
+		return evalWhileStatement(ctx, state, node, env)
 
 	case *ast.ContinueStatement:
 		return object.CONTINUE_VALUE
@@ -58,93 +65,105 @@ func Eval(
 		return object.BREAK_VALUE
 
 	case *ast.ExpressionStatement:
-		return Eval(ctx, node.Expression, env)
+		return Eval(ctx, state, node.Expression, env)
 
 	case *ast.ReturnStatement:
-		val := Eval(ctx, node.ReturnValue, env)
+		val := Eval(ctx, state, node.ReturnValue, env)
 		if IsError(val) {
 			return val
 		}
 		return &object.ReturnValue{Value: val}
 
 	case *ast.ForInStatement:
-		return evalForInStatement(ctx, node, env)
+		return evalForInStatement(ctx, state, node, env)
 
 	case *ast.WeiExportStatement:
-		var names []string
-		for _, ident := range node.Names {
-			name := ident.Value
-			if _, ok := env.Get(name); !ok {
-				return object.NewError("undefined '%s'", name)
-			}
-			names = append(names, name)
-		}
-		return evalExport(ctx, env, node.Names)
+		return evalExport(ctx, state, env, node.Names)
 
 	// 表达式
 	case *ast.WeiImportExpression:
-		filename := Eval(ctx, node.Filename, env)
-		return evalImport(ctx, filename)
+		return evalImport(ctx, state, node.Filename)
 
 	case *ast.UnaryExpression:
-		operand := Eval(ctx, node.Operand, env)
+		operand := Eval(ctx, state, node.Operand, env)
 		if IsError(operand) {
 			return operand
 		}
-		return evalUnaryExpression(ctx, node.Operator, operand)
+		state.UpdateLocation(node)
+		ret := evalUnaryExpression(ctx, node.Operator, operand)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 
 	case *ast.WeiAttributeExpression:
 		left, ok := env.Get("wei")
 		if !ok {
-			return object.Unreachable("undefined 'wei'")
+			return state.Unreachable("undefined 'wei'")
 		}
-		return evalAttributeExpression(ctx, left, node.Attribute.Value)
+		ret := evalAttributeExpression(ctx, left, node.Attribute.Value)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 
 	case *ast.BinaryOpExpression:
-		left := Eval(ctx, node.Left, env)
+		left := Eval(ctx, state, node.Left, env)
 		if IsError(left) {
 			return left
 		}
-		right := Eval(ctx, node.Right, env)
+		right := Eval(ctx, state, node.Right, env)
 		if IsError(right) {
 			return right
 		}
-		return evalBinaryOpExpression(ctx, node.Operator, left, right)
+		state.UpdateLocation(node)
+		return evalBinaryOpExpression(ctx, state, node.Operator, left, right)
 
 	case *ast.CallExpression:
-		function := Eval(ctx, node.Function, env)
+		function := Eval(ctx, state, node.Function, env)
 		if IsError(function) {
 			return function
 		}
-		args := evalExpressions(ctx, node.Arguments, env)
+		args := evalExpressions(ctx, state, node.Arguments, env)
 		if len(args) == 1 && IsError(args[0]) {
 			return args[0]
 		}
-		return evalFunction(ctx, function, args)
+		state.UpdateLocation(node)
+		return evalFunction(ctx, state, function, args)
 
 	case *ast.SubscriptionExpression:
-		left := Eval(ctx, node.Left, env)
+		left := Eval(ctx, state, node.Left, env)
 		if IsError(left) {
 			return left
 		}
-		index := Eval(ctx, node.Index, env)
+		index := Eval(ctx, state, node.Index, env)
 		if IsError(index) {
 			return index
 		}
-		return evalSubscriptionExpression(ctx, left, index)
+		state.UpdateLocation(node)
+		ret := evalSubscriptionExpression(ctx, left, index)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 
 	case *ast.AttributeExpression:
-		left := Eval(ctx, node.Left, env)
+		left := Eval(ctx, state, node.Left, env)
 		if IsError(left) {
 			return left
 		}
-		return evalAttributeExpression(ctx, left, node.Attribute.Value)
+		state.UpdateLocation(node)
+		ret := evalAttributeExpression(ctx, left, node.Attribute.Value)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 
 	case *ast.DictLiteral:
-		return evalDictLiteral(ctx, node, env)
+		return evalDictLiteral(ctx, state, node, env)
 
 	case *ast.ListLiteral:
-		elements := evalExpressions(ctx, node.Elements, env)
+		elements := evalExpressions(ctx, state, node.Elements, env)
 		if len(elements) == 1 && IsError(elements[0]) {
 			return elements[0]
 		}
@@ -154,7 +173,11 @@ func Eval(
 		return object.NewFunction(node, env)
 
 	case *ast.Identifier:
-		return evalIdentifier(ctx, node, env)
+		ret := evalIdentifier(ctx, node, env)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 
 	case *ast.StringLiteral:
 		return object.NewString(node.Value)
@@ -174,13 +197,14 @@ func Eval(
 
 func evalProgram(
 	ctx context.Context,
+	state *WeiState,
 	program *ast.Program,
 	env *object.Environment,
 ) object.Object {
 	var result object.Object
 
 	for _, statement := range program.Statements {
-		result = Eval(ctx, statement, env)
+		result = Eval(ctx, state, statement, env)
 
 		switch result := result.(type) {
 		case *object.ReturnValue:
@@ -194,6 +218,7 @@ func evalProgram(
 
 func evalBlockStatements(
 	ctx context.Context,
+	state *WeiState,
 	block *ast.BlockStatement,
 	env *object.Environment,
 ) object.Object {
@@ -201,7 +226,7 @@ func evalBlockStatements(
 
 	blockEnv := object.NewEnclosedEnvironment(env)
 	for _, statement := range block.Statements {
-		result = Eval(ctx, statement, blockEnv)
+		result = Eval(ctx, state, statement, blockEnv)
 
 		in := object.TypeIn(
 			result,
@@ -220,68 +245,86 @@ func evalBlockStatements(
 
 func evalAssignStatement(
 	ctx context.Context,
-	assign *ast.AssignStatement, env *object.Environment,
+	state *WeiState,
+	assign *ast.AssignStatement,
+	env *object.Environment,
 ) object.Object {
-	val := Eval(ctx, assign.Value, env)
+	val := Eval(ctx, state, assign.Value, env)
 	if IsError(val) {
 		return val
 	}
 	switch obj := assign.Left.(type) {
 	case *ast.Identifier:
+		// 设置回赋值所在的行号
+		state.UpdateLocation(assign)
 		ret := env.Set(obj.Value, val)
 		if IsError(ret) {
-			return ret
+			state.HandleError(ret)
 		}
-		return nil
+		return ret
 	case *ast.SubscriptionExpression:
-		left := Eval(ctx, obj.Left, env)
+		left := Eval(ctx, state, obj.Left, env)
 		if IsError(left) {
 			return left
 		}
-		index := Eval(ctx, obj.Index, env)
-		switch {
-		case left.TypeIs(object.LIST_OBJ):
+		index := Eval(ctx, state, obj.Index, env)
+		if IsError(index) {
+			return index
+		}
+		// 设置回赋值所在的行号
+		state.UpdateLocation(assign)
+		switch left.Type() {
+		case object.LIST_OBJ:
 			listObj := left.(*object.List)
 			return listObj.SetItem(index, val)
-		case left.TypeIs(object.DICT_OBJ):
+		case object.DICT_OBJ:
 			dictObj := left.(*object.Dict)
 			return dictObj.SetItem(index, val)
 		default:
-			return object.NewError("'%s' object is not subscriptable", left.Type())
+			return state.NewError("'%s' object does not support item assignment", left.Type())
 		}
 	case *ast.AttributeExpression:
-		left := Eval(ctx, obj.Left, env)
+		left := Eval(ctx, state, obj.Left, env)
 		if IsError(left) {
 			return left
 		}
+		// 设置回赋值所在的行号
+		state.UpdateLocation(assign)
 		name := obj.Attribute.Value
 		if attr, ok := left.(object.Attributable); ok {
-			return attr.SetAttribute(name, val)
+			ret := attr.SetAttribute(name, val)
+			if IsError(ret) {
+				state.HandleError(ret)
+			}
+			return ret
 		}
-		return object.NewError("'%s' object can not set attribute", left.Type())
+		return state.NewError("'%s' object does not support set attribute", left.Type())
 	default:
-		return object.Unreachable("assign")
+		// 设置回赋值所在的行号
+		state.UpdateLocation(assign)
+		return state.Unreachable("assign")
 	}
 
 }
 
 func evalIfStatement(
 	ctx context.Context,
+	state *WeiState,
 	is *ast.IfStatement,
 	env *object.Environment,
 ) object.Object {
 	for _, branch := range is.IfBranches {
-		condition := Eval(ctx, branch.Condition, env)
+		condition := Eval(ctx, state, branch.Condition, env)
 		if IsError(condition) {
 			return condition
 		}
 		if isTruthy(condition) {
-			return Eval(ctx, branch.Body, env)
+			return Eval(ctx, state, branch.Body, env)
 		}
 	}
 
 	if is.ElseBody != nil {
-		return Eval(ctx, is.ElseBody, env)
+		return Eval(ctx, state, is.ElseBody, env)
 	} else {
 		return object.NULL
 	}
@@ -289,45 +332,52 @@ func evalIfStatement(
 
 func evalWhileStatement(
 	ctx context.Context,
+	state *WeiState,
 	ws *ast.WhileStatement,
 	env *object.Environment,
 ) object.Object {
 	for {
-		condition := Eval(ctx, ws.Condition, env)
+		condition := Eval(ctx, state, ws.Condition, env)
 		if isTruthy(condition) {
 			encolosedEnv := object.NewEnclosedEnvironment(env)
-			val := Eval(ctx, ws.Body, encolosedEnv)
+			val := Eval(ctx, state, ws.Body, encolosedEnv)
 			switch val.(type) {
 			case *object.ReturnValue, *object.Error:
 				return val
 			case *object.BreakValue:
-				return object.NULL
+				return nil
 			}
 		} else {
 			break
 		}
 	}
-	return object.NULL
+	return nil
 }
 
 func evalForInStatement(
 	ctx context.Context,
+	state *WeiState,
 	forInStmt *ast.ForInStatement,
 	env *object.Environment,
 ) object.Object {
-	obj := Eval(ctx, forInStmt.Expr, env)
+	obj := Eval(ctx, state, forInStmt.Expr, env)
+	// 设置 in 后表达式的行号
+	state.UpdateLocation(forInStmt.Expr)
 	iterable, ok := obj.(object.Iterable)
 	if !ok {
-		return object.NewError("'%s' object is not iterable", obj.Type())
+		return state.NewError("'%s' object is not iterable", obj.Type())
 	}
 	iterator := iterable.Iter()
 	for {
+		// 设置 in 后表达式的行号
+		state.UpdateLocation(forInStmt.Expr)
 		enclosedEnv := object.NewEnclosedEnvironment(env)
 		nextVal := iterator.Next()
 		if nextVal == object.StopIteration {
 			break
 		}
 		if IsError(nextVal) {
+			state.HandleError(nextVal)
 			return nextVal
 		}
 		var values []object.Object
@@ -338,12 +388,15 @@ func evalForInStatement(
 			values = append(values, nextVal)
 		}
 		if len(forInStmt.Targets) != len(values) {
-			return object.WrongNumberUnpack(len(values), len(forInStmt.Targets))
+			state.UpdateLocation(forInStmt)
+			ret := object.WrongNumberUnpack(len(values), len(forInStmt.Targets))
+			state.HandleError(ret)
+			return ret
 		}
 		for i, target := range forInStmt.Targets {
 			enclosedEnv.Add(target.Value, values[i], forInStmt.Con)
 		}
-		ret := Eval(ctx, forInStmt.Body, enclosedEnv)
+		ret := Eval(ctx, state, forInStmt.Body, enclosedEnv)
 		if IsError(ret) {
 			return ret
 		}
@@ -353,26 +406,38 @@ func evalForInStatement(
 
 func evalFunction(
 	ctx context.Context,
+	state *WeiState,
 	fn object.Object,
 	args []object.Object,
 ) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
 		if len(args) != len(fn.Parameters) {
-			return object.NewError("function expected %d arguments but got %d", len(fn.Parameters), len(args))
+			return state.NewError("function expected %d arguments but got %d", len(fn.Parameters), len(args))
 		}
 		extendedEnv := extendFunctionEnv(fn, args)
-		evaluated := Eval(ctx, fn.Body, extendedEnv)
+		location := fn.Body.GetFileLocation()
+		state.CreateFrame(location.Filename, fn.Name)
+		evaluated := Eval(ctx, state, fn.Body, extendedEnv)
+		state.DestroyFrame()
 		if IsError(evaluated) {
 			return evaluated
 		}
 		return unwrapReturnValue(evaluated)
 	case *object.Builtin:
-		return fn.Fn(args...)
+		ret := fn.Fn(args...)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 	case *object.BoundBuiltinMethod:
-		return fn.Fn(fn.This, args...)
+		ret := fn.Fn(fn.This, args...)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
 	default:
-		return object.NewError("not a function: '%s'", fn.Type())
+		return state.NewError("not a function: '%s'", fn.Type())
 	}
 }
 
@@ -430,13 +495,14 @@ func evalStringSubscriptionExpression(
 
 func evalExpressions(
 	ctx context.Context,
+	state *WeiState,
 	exps []ast.Expression,
 	env *object.Environment,
 ) []object.Object {
 	var result []object.Object
 
 	for _, exp := range exps {
-		evaluated := Eval(ctx, exp, env)
+		evaluated := Eval(ctx, state, exp, env)
 		if IsError(evaluated) {
 			return []object.Object{evaluated}
 		}
@@ -448,23 +514,25 @@ func evalExpressions(
 
 func evalDictLiteral(
 	ctx context.Context,
+	state *WeiState,
 	node *ast.DictLiteral,
 	env *object.Environment,
 ) object.Object {
 	pairs := make(map[object.HashKey]object.HashPair)
 
 	for keyNode, valueNode := range node.Pairs {
-		key := Eval(ctx, keyNode, env)
+		key := Eval(ctx, state, keyNode, env)
 		if IsError(key) {
 			return key
 		}
 
 		hashKey, ok := key.(object.Hashable)
 		if !ok {
-			return object.NewError("unhashable type: '%s'", key.Type())
+			state.UpdateLocation(keyNode)
+			return state.NewError("unhashable type: '%s'", key.Type())
 		}
 
-		value := Eval(ctx, valueNode, env)
+		value := Eval(ctx, state, valueNode, env)
 		if IsError(value) {
 			return value
 		}
@@ -511,8 +579,7 @@ func evalMinusUnaryOperatorExpression(
 	right object.Object,
 ) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
-		message := fmt.Sprintf("unsupported operand type for -: '%s'", right.Type())
-		return &object.Error{Message: message}
+		return object.NewError("unsupported operand type for -: '%s'", right.Type())
 	}
 
 	value := right.(*object.Integer).Value
@@ -525,8 +592,7 @@ func evalPlusUnaryOperatorExpression(
 	right object.Object,
 ) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
-		message := fmt.Sprintf("unsupported operand type for +: '%s'", right.Type())
-		return &object.Error{Message: message}
+		return object.NewError("unsupported operand type for +: '%s'", right.Type())
 	}
 
 	value := right.(*object.Integer).Value
@@ -539,8 +605,7 @@ func evalBitwiseNotOperatorExpression(
 	right object.Object,
 ) object.Object {
 	if right.TypeNotIs(object.INTEGER_OBJ) {
-		message := fmt.Sprintf("bad operand type for unary +: '%s'", right.Type())
-		return &object.Error{Message: message}
+		return object.NewError("bad operand type for unary +: '%s'", right.Type())
 	}
 
 	value := right.(*object.Integer).Value
@@ -549,6 +614,7 @@ func evalBitwiseNotOperatorExpression(
 
 func evalBinaryOpExpression(
 	ctx context.Context,
+	state *WeiState,
 	operator string,
 	left, right object.Object,
 ) object.Object {
@@ -567,9 +633,8 @@ func evalBinaryOpExpression(
 	case operator == "or":
 		return object.NativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	default:
-		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
+		return state.NewError("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
-		return &object.Error{Message: msg}
 	}
 }
 
@@ -620,9 +685,8 @@ func evalIntegerBinaryOpExpression(
 	case "or":
 		return object.NativeBoolToBooleanObject(leftVal != 0 || rightVal != 0)
 	default:
-		msg := fmt.Sprintf("unsupported operand type for %s: '%s' and '%s'",
+		return object.NewError("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())
-		return &object.Error{Message: msg}
 	}
 }
 

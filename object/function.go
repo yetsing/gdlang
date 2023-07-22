@@ -6,6 +6,7 @@ import (
 )
 
 type Function struct {
+	Name       string
 	Parameters []*ast.Identifier
 	Body       *ast.BlockStatement
 	Env        *Environment
@@ -13,6 +14,7 @@ type Function struct {
 
 func NewFunction(fl *ast.FunctionLiteral, env *Environment) *Function {
 	return &Function{
+		Name:       fl.Name,
 		Parameters: fl.Parameters,
 		Body:       fl.Body,
 		Env:        env,

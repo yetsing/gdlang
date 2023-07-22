@@ -10,7 +10,7 @@ var (
 	atLeastOneArgument = NewError("want at least 1 arguments")
 )
 
-func NewError(format string, a ...interface{}) *Error {
+func NewError(format string, a ...any) *Error {
 	return &Error{Message: fmt.Sprintf(format, a...)}
 }
 

@@ -58,7 +58,7 @@ func (e *Environment) Set(name string, val Object) Object {
 		return NewError("cannot assign to constant: '%s'", name)
 	}
 	e.store[name] = val
-	return val
+	return nil
 }
 
 // Pass 用于函数调用传值、for-in 传值

@@ -1,7 +1,9 @@
 package interpreter
 
 import (
+	"context"
 	"fmt"
+	"path/filepath"
 	"weilang/evaluator"
 	"weilang/lexer"
 	"weilang/object"
@@ -9,6 +11,7 @@ import (
 )
 
 func RunFile(filename string) {
+	filename, _ = filepath.Abs(filename)
 	l := lexer.NewWithFilename(filename)
 	p := parser.New(l)
 	program, err := p.ParseProgram()
@@ -17,10 +20,16 @@ func RunFile(filename string) {
 		return
 	}
 
-	mod := object.NewModule("")
-	ctx := evaluator.NewModuleContext(mod)
-	evaluated := evaluator.Eval(ctx, program, mod.GetEnv())
+	mod := object.NewModule(filename)
+	evaluator.CacheModule(mod)
+	state := evaluator.NewWeiState(mod)
+	state.CreateFrame(filename, "<module>")
+	evaluated := evaluator.Eval(context.Background(), state, program, mod.GetEnv())
 	if evaluator.IsError(evaluated) {
-		fmt.Println(evaluated.String())
+		if state.HasExc() {
+			state.PrintExc()
+		} else {
+			fmt.Println(evaluated.String())
+		}
 	}
 }

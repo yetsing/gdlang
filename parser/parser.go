@@ -434,6 +434,7 @@ func (p *Parser) primary() (ast.Expression, error) {
 	}
 	for p.currTokenIn(token.LBRACKET, token.DOT) {
 		tok = p.currToken
+		location := p.currFileLocation()
 		switch p.currToken.Type {
 		case token.LBRACKET:
 			p.nextToken()
@@ -442,9 +443,10 @@ func (p *Parser) primary() (ast.Expression, error) {
 				return nil, err
 			}
 			expr = &ast.SubscriptionExpression{
-				Token: tok,
-				Left:  expr,
-				Index: index,
+				Location: location,
+				Token:    tok,
+				Left:     expr,
+				Index:    index,
 			}
 			err = p.eat(token.RBRACKET)
 			if err != nil {
@@ -457,6 +459,7 @@ func (p *Parser) primary() (ast.Expression, error) {
 				return nil, err
 			}
 			expr = &ast.AttributeExpression{
+				Location:  location,
 				Token:     tok,
 				Left:      expr,
 				Attribute: ident,
@@ -468,7 +471,7 @@ func (p *Parser) primary() (ast.Expression, error) {
 
 // expression_statement ::= expression (";" | NEWLINE)
 func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
-	stmt := &ast.ExpressionStatement{Token: p.currToken}
+	stmt := &ast.ExpressionStatement{Location: p.currFileLocation(), Token: p.currToken}
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -485,6 +488,7 @@ func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 // else_if_branch ::= "else" if_branch
 // else_branch    ::= "else" block_statement
 func (p *Parser) ifStatement() (*ast.IfStatement, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	var branches []*ast.IfBranch
 	var elseBody *ast.BlockStatement
@@ -524,6 +528,7 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.IfStatement{
+		Location:   location,
 		Token:      tok,
 		IfBranches: branches,
 		ElseBody:   elseBody,
@@ -533,6 +538,7 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 
 // if_branch      ::= "if" "(" expression ")" block_statement
 func (p *Parser) ifBranch() (*ast.IfBranch, error) {
+	location := p.currFileLocation()
 	err := p.eat(token.IF)
 	if err != nil {
 		return nil, err
@@ -556,6 +562,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 		return nil, err
 	}
 	branch := &ast.IfBranch{
+		Location:  location,
 		Condition: condition,
 		Body:      body,
 	}
@@ -565,6 +572,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 // while_statement ::= "while" "(" expression ")" block_statement  (";" | NEWLINE)
 func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 	tok := p.currToken
+	location := p.currFileLocation()
 	err := p.eat(token.WHILE)
 	if err != nil {
 		return nil, err
@@ -593,6 +601,7 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 		return nil, p.expectError(token.SEMICOLON)
 	}
 	stmt := &ast.WhileStatement{
+		Location:  location,
 		Token:     tok,
 		Condition: condition,
 		Body:      body,
@@ -605,6 +614,7 @@ func (p *Parser) continueStatement() (*ast.ContinueStatement, error) {
 	if p.whileStack[len(p.whileStack)-1] == 0 {
 		return nil, p.syntaxError("continue is not in a loop")
 	}
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.CONTINUE)
 	if err != nil {
@@ -613,7 +623,7 @@ func (p *Parser) continueStatement() (*ast.ContinueStatement, error) {
 	if !p.isStatementEnd() {
 		return nil, p.expectError(token.SEMICOLON)
 	}
-	stmt := &ast.ContinueStatement{Token: tok}
+	stmt := &ast.ContinueStatement{Location: location, Token: tok}
 	return stmt, nil
 }
 
@@ -622,6 +632,7 @@ func (p *Parser) breakStatement() (*ast.BreakStatement, error) {
 	if p.whileStack[len(p.whileStack)-1] == 0 {
 		return nil, p.syntaxError("break is not in a loop")
 	}
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.BREAK)
 	if err != nil {
@@ -630,7 +641,7 @@ func (p *Parser) breakStatement() (*ast.BreakStatement, error) {
 	if !p.isStatementEnd() {
 		return nil, p.expectError(token.SEMICOLON)
 	}
-	stmt := &ast.BreakStatement{Token: tok}
+	stmt := &ast.BreakStatement{Location: location, Token: tok}
 	return stmt, nil
 }
 
@@ -654,6 +665,7 @@ func (p *Parser) expression() (ast.Expression, error) {
 //
 // or_expression ::= and_expression ("or" and_expression)*
 func (p *Parser) orExpression() (ast.Expression, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	expr, err := p.andExpression()
 	if err != nil {
@@ -667,6 +679,7 @@ func (p *Parser) orExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -680,6 +693,7 @@ func (p *Parser) orExpression() (ast.Expression, error) {
 //
 // and_expression ::= not_expression ("and" not_expression)*
 func (p *Parser) andExpression() (ast.Expression, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	expr, err := p.notExpression()
 	if err != nil {
@@ -693,6 +707,7 @@ func (p *Parser) andExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -709,6 +724,7 @@ func (p *Parser) notExpression() (ast.Expression, error) {
 	if !p.currTokenIs(token.NOT) {
 		return p.comparisonExpression()
 	}
+	location := p.currFileLocation()
 	tok := p.currToken
 	op := p.currToken.Literal
 	_ = p.eat(token.NOT)
@@ -717,6 +733,7 @@ func (p *Parser) notExpression() (ast.Expression, error) {
 		return nil, err
 	}
 	expr := &ast.UnaryExpression{
+		Location: location,
 		Token:    tok,
 		Operator: op,
 		Operand:  right,
@@ -728,7 +745,6 @@ func (p *Parser) notExpression() (ast.Expression, error) {
 //
 // comparison_expression ::= bitwise_xor_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) bitwise_xor_expression)*
 func (p *Parser) comparisonExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.bitwiseOrExpression()
 	if err != nil {
 		return nil, err
@@ -738,6 +754,8 @@ func (p *Parser) comparisonExpression() (ast.Expression, error) {
 		token.NOT_EQ, token.EQ,
 	}
 	for p.currTokenIn(optypes...) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eatIn(optypes...)
 		right, err := p.bitwiseOrExpression()
@@ -745,6 +763,7 @@ func (p *Parser) comparisonExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -758,12 +777,13 @@ func (p *Parser) comparisonExpression() (ast.Expression, error) {
 //
 // bitwise_or_expression ::= bitwise_xor_expression ( "|" bitwise_xor_expression)*
 func (p *Parser) bitwiseOrExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.bitwiseXorExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIs(token.BITWISE_OR) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eat(token.BITWISE_OR)
 		right, err := p.bitwiseXorExpression()
@@ -771,6 +791,7 @@ func (p *Parser) bitwiseOrExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -784,12 +805,13 @@ func (p *Parser) bitwiseOrExpression() (ast.Expression, error) {
 //
 // bitwise_xor_expression ::= bitwise_and_expression ( "^" bitwise_and_expression)*
 func (p *Parser) bitwiseXorExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.bitwiseAndExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIs(token.BITWISE_XOR) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eat(token.BITWISE_XOR)
 		right, err := p.bitwiseAndExpression()
@@ -797,6 +819,7 @@ func (p *Parser) bitwiseXorExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -810,12 +833,13 @@ func (p *Parser) bitwiseXorExpression() (ast.Expression, error) {
 //
 // bitwise_and_expression ::= shift_expression ( "&" shift_expression)*
 func (p *Parser) bitwiseAndExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.shiftExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIs(token.BITWISE_AND) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eat(token.BITWISE_AND)
 		right, err := p.shiftExpression()
@@ -823,6 +847,7 @@ func (p *Parser) bitwiseAndExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -836,12 +861,13 @@ func (p *Parser) bitwiseAndExpression() (ast.Expression, error) {
 //
 // shift_expression ::= plus_expression (( "<<" | ">>" ) plus_expression)*
 func (p *Parser) shiftExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.plusExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIn(token.LEFT_SHIFT, token.RIGHT_SHIFT) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eatIn(token.LEFT_SHIFT, token.RIGHT_SHIFT)
 		right, err := p.plusExpression()
@@ -849,6 +875,7 @@ func (p *Parser) shiftExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -862,12 +889,13 @@ func (p *Parser) shiftExpression() (ast.Expression, error) {
 //
 // plus_expression ::= multiplication_expression (("+" | "-") multiplication_expression)*
 func (p *Parser) plusExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.multiplyExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIn(token.PLUS, token.MINUS) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eatIn(token.PLUS, token.MINUS)
 		right, err := p.multiplyExpression()
@@ -875,6 +903,7 @@ func (p *Parser) plusExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -888,12 +917,13 @@ func (p *Parser) plusExpression() (ast.Expression, error) {
 //
 // multiply_expression ::= unary_expression (("*" | "/" | "%") unary_expression)*
 func (p *Parser) multiplyExpression() (ast.Expression, error) {
-	tok := p.currToken
 	expr, err := p.unaryExpression()
 	if err != nil {
 		return nil, err
 	}
 	for p.currTokenIn(token.ASTERISK, token.SLASH, token.MODULO) {
+		location := p.currFileLocation()
+		tok := p.currToken
 		op := p.currToken.Literal
 		_ = p.eatIn(token.ASTERISK, token.SLASH, token.MODULO)
 		right, err := p.unaryExpression()
@@ -901,6 +931,7 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr = &ast.BinaryOpExpression{
+			Location: location,
 			Token:    tok,
 			Left:     expr,
 			Operator: op,
@@ -914,6 +945,7 @@ func (p *Parser) multiplyExpression() (ast.Expression, error) {
 //
 // unary_expression ::= primary_expression | ["-" | "+" | "~"] unary_expression
 func (p *Parser) unaryExpression() (ast.Expression, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	if !p.currTokenIn(token.MINUS, token.PLUS, token.BITWISE_NOT) {
 		return p.primaryExpression()
@@ -928,6 +960,7 @@ func (p *Parser) unaryExpression() (ast.Expression, error) {
 		return nil, err
 	}
 	expr := &ast.UnaryExpression{
+		Location: location,
 		Token:    tok,
 		Operator: op,
 		Operand:  right,
@@ -948,18 +981,20 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 		return nil, err
 	}
 	for p.currTokenIn(token.LBRACKET, token.DOT, token.LPAREN) {
+		location := p.currFileLocation()
 		tok := p.currToken
 		switch p.currToken.Type {
 		case token.LBRACKET:
-			_ = p.eat(token.LBRACKET)
+			p.nextToken()
 			index, err := p.expression()
 			if err != nil {
 				return nil, err
 			}
 			expr = &ast.SubscriptionExpression{
-				Token: tok,
-				Left:  expr,
-				Index: index,
+				Location: location,
+				Token:    tok,
+				Left:     expr,
+				Index:    index,
 			}
 			err = p.eat(token.RBRACKET)
 			if err != nil {
@@ -972,6 +1007,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 				return nil, err
 			}
 			expr = &ast.AttributeExpression{
+				Location:  location,
 				Token:     tok,
 				Left:      expr,
 				Attribute: ident,
@@ -989,6 +1025,7 @@ func (p *Parser) primaryExpression() (ast.Expression, error) {
 				return nil, err
 			}
 			expr = &ast.CallExpression{
+				Location:  location,
 				Token:     tok,
 				Function:  expr,
 				Arguments: arguments,
@@ -1035,24 +1072,27 @@ func (p *Parser) atom() (ast.Expression, error) {
 			return nil, p.syntaxError(err.Error())
 		}
 		expr = &ast.IntegerLiteral{
-			Token: p.currToken,
-			Value: n,
+			Location: p.currFileLocation(),
+			Token:    p.currToken,
+			Value:    n,
 		}
-		_ = p.eat(token.INT)
+		p.nextToken()
 	case token.STRING:
 		expr = &ast.StringLiteral{
-			Token: p.currToken,
-			Value: p.currToken.Literal,
+			Location: p.currFileLocation(),
+			Token:    p.currToken,
+			Value:    p.currToken.Literal,
 		}
-		_ = p.eat(token.STRING)
+		p.nextToken()
 	case token.TRUE, token.FALSE:
 		expr = &ast.Boolean{
-			Token: p.currToken,
-			Value: p.currToken.Literal == "true",
+			Location: p.currFileLocation(),
+			Token:    p.currToken,
+			Value:    p.currToken.Literal == "true",
 		}
-		_ = p.eatIn(token.TRUE, token.FALSE)
+		p.nextToken()
 	case token.NULL:
-		expr = &ast.NullLiteral{Token: p.currToken}
+		expr = &ast.NullLiteral{Location: p.currFileLocation(), Token: p.currToken}
 		p.nextToken()
 	case token.LPAREN:
 		p.parenCount++
@@ -1086,6 +1126,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 //
 // list_literal ::= "[" [expression] ("," expression)* [","] "]"
 func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	p.parenCount++
 	err := p.eat(token.LBRACKET)
@@ -1102,6 +1143,7 @@ func (p *Parser) listLiteral() (*ast.ListLiteral, error) {
 		return nil, err
 	}
 	expr := &ast.ListLiteral{
+		Location: location,
 		Token:    tok,
 		Elements: elements,
 	}
@@ -1149,6 +1191,7 @@ func (p *Parser) expressionList(end token.TokenType) ([]ast.Expression, error) {
 // pairs        ::= [pair ("," pair)* [","]
 // pair         ::= expression ":" expression
 func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	p.parenCount++
 	err := p.eat(token.LBRACE)
@@ -1201,8 +1244,9 @@ func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 		return nil, err
 	}
 	expr := &ast.DictLiteral{
-		Token: tok,
-		Pairs: pairs,
+		Location: location,
+		Token:    tok,
+		Pairs:    pairs,
 	}
 	return expr, nil
 }
@@ -1211,6 +1255,7 @@ func (p *Parser) dictLiteral() (*ast.DictLiteral, error) {
 //
 // function_literal ::= "fn" "(" parameter_list ")" block_statement
 func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
+	location := p.currFileLocation()
 	tok := p.currToken
 	err := p.eat(token.FUNCTION)
 	if err != nil {
@@ -1237,7 +1282,9 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	}
 	p.whileStack = p.whileStack[:len(p.whileStack)-1]
 	fl := &ast.FunctionLiteral{
+		Location:   location,
 		Token:      tok,
+		Name:       "<anonymous>",
 		Parameters: paramters,
 		Body:       block,
 	}
@@ -1282,6 +1329,7 @@ func (p *Parser) parameterList() ([]*ast.Identifier, error) {
 
 // wei_expression ::= ( "wei" "." IDENT ) | ( "wei" "." "import" "(" STRING_LIT ")" )
 func (p *Parser) weiExpression() (ast.Expression, error) {
+	location := p.currFileLocation()
 	tk := p.currToken
 	err := p.eat(token.WEI)
 	if err != nil {
@@ -1307,6 +1355,7 @@ func (p *Parser) weiExpression() (ast.Expression, error) {
 			return nil, err
 		}
 		expr := &ast.WeiImportExpression{
+			Location: location,
 			Token:    tk,
 			Filename: filename,
 		}
@@ -1317,6 +1366,7 @@ func (p *Parser) weiExpression() (ast.Expression, error) {
 		return nil, err
 	}
 	expr := &ast.WeiAttributeExpression{
+		Location:  location,
 		Token:     tk,
 		Attribute: attribute,
 	}

@@ -139,6 +139,7 @@ func (ce *CallExpression) GetFileLocation() *FileLocation {
 type FunctionLiteral struct {
 	Location   *FileLocation
 	Token      token.Token // The 'fn' token
+	Name       string
 	Parameters []*Identifier
 	Body       *BlockStatement
 }

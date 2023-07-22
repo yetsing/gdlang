@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"context"
 	"testing"
 	"weilang/lexer"
 	"weilang/object"
@@ -17,7 +18,9 @@ func testEval(t *testing.T, input string) object.Object {
 	}
 
 	mod := object.NewModule("")
-	return Eval(NewModuleContext(mod), program, mod.GetEnv())
+	state := NewWeiState(mod)
+	state.CreateFrame("", "<module>")
+	return Eval(context.Background(), state, program, mod.GetEnv())
 }
 
 func TestAssignStatement(t *testing.T) {
@@ -78,12 +81,12 @@ func TestAssignStatement(t *testing.T) {
 		},
 		{
 			`var a= 1; a['a'] = "hello"`,
-			"'int' object is not subscriptable",
+			"'int' object does not support item assignment",
 			true,
 		},
 		{`var d = {'a': 1}; d.a = 10; d.a`, 10, false},
 		{`var d = []; d.a = 10`, "'list' object has not attribute 'a'", true},
-		{`var d = 1; d.a = 10`, "'int' object can not set attribute", true},
+		{`var d = 1; d.a = 10`, "'int' object does not support set attribute", true},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(t, tt.input)
@@ -1010,6 +1013,7 @@ func testStringObject(t *testing.T, obj object.Object, expected string) bool {
 }
 
 func testErrorObject(t *testing.T, obj object.Object, expected string) bool {
+	t.Helper()
 	errObj, ok := obj.(*object.Error)
 	if !ok {
 		t.Errorf("object is not Error. got=%T (%+v)",

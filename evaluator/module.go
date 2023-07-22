@@ -13,41 +13,43 @@ import (
 )
 
 var modules = make(map[string]*object.Module)
-var moduleKey = "module"
 
-func evalExport(ctx context.Context, env *object.Environment, idents []*ast.Identifier) object.Object {
-	value := ctx.Value(moduleKey)
-	mod, ok := value.(*object.Module)
-	if !ok {
-		return object.Unreachable("not found module from context")
-	}
-	for _, ident := range idents {
-		name := ident.Value
-		if _, ok := env.Get(name); !ok {
-			return object.NewError("undefined '%s'", name)
-		}
-		mod.AddExport(name)
-	}
-	return object.NULL
+func CacheModule(module *object.Module) {
+	modules[module.Filename()] = module
 }
 
 //goland:noinspection GoUnusedParameter
-func evalImport(ctx context.Context, filename object.Object) object.Object {
-	strObj, ok := filename.(*object.String)
-	if !ok {
-		return object.WrongArgumentTypeAt(filename.Type(), 1)
+func evalExport(ctx context.Context, state *WeiState, env *object.Environment, idents []*ast.Identifier) object.Object {
+	mod := state.GetModule()
+	for _, ident := range idents {
+		state.UpdateLocation(ident)
+		name := ident.Value
+		if _, ok := env.Get(name); !ok {
+			obj := object.NewError("undefined '%s'", name)
+			state.HandleError(obj)
+			return obj
+		}
+		mod.AddExport(name)
 	}
-	return importFromFile(strObj.Value)
+	return nil
 }
 
-func importFromFile(filename string) object.Object {
+//goland:noinspection GoUnusedParameter
+func evalImport(ctx context.Context, state *WeiState, filename string) object.Object {
+	origModule := state.GetModule()
+	ret := importFromFile(ctx, state, filename)
+	state.SetModule(origModule)
+	return ret
+}
+
+func importFromFile(ctx context.Context, state *WeiState, filename string) object.Object {
 	weiFilename := filename
 	if !strings.HasSuffix(filename, ".wei") {
 		weiFilename = filename + ".wei"
 	}
 	weiFilename, _ = filepath.Abs(weiFilename)
 	if _, err := os.Stat(weiFilename); errors.Is(err, os.ErrNotExist) {
-		return object.NewError("Not found module filename: %s", filename)
+		return state.NewError("Not found module: %s", filename)
 	}
 
 	if mod, ok := modules[weiFilename]; ok {
@@ -62,19 +64,18 @@ func importFromFile(filename string) object.Object {
 	}
 
 	module := object.NewModule(weiFilename)
-	modules[weiFilename] = module
+	CacheModule(module)
+	state.SetModule(module)
+	state.CreateFrame(weiFilename, "import")
 	evaluated := Eval(
-		NewModuleContext(module),
+		ctx,
+		state,
 		program,
 		module.GetEnv(),
 	)
+	state.DestroyFrame()
 	if IsError(evaluated) {
 		return evaluated
 	}
 	return module
-}
-
-func NewModuleContext(m *object.Module) context.Context {
-	ctx := context.Background()
-	return context.WithValue(ctx, moduleKey, m)
 }

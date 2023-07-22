@@ -24,6 +24,10 @@ func (m *Module) String() string {
 	return fmt.Sprintf("<module object at '%s'>", m.filename)
 }
 
+func (m *Module) Filename() string {
+	return m.filename
+}
+
 func (m *Module) GetAttribute(name string) Object {
 	if _, ok := m.export[name]; !ok {
 		return attributeError(string(m.Type()), name)

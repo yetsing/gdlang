@@ -3,27 +3,10 @@
 	"name": "weilang",
 	"patterns": [
 		{
-			"comment": "函数调用",
-			"match": "(\\w+)\\(",
-			"name": "meta.function-call.weilang entity.name.function.weilang"
-		},
-		{
-			"comment": "函数定义",
-			"match": "^\\b(con|var)\\b\\s+(\\w+)\\s+=\\s+(\\bfn\\b)\\(",
-			"captures": {
-				"1": {
-					"name": "keyword.con.weilang"
-				},
-				"2": {
-					"name": "entity.name.function.weilang"
-				},
-				"3": {
-					"name": "keyword.function.weilang"
-				}
-			}
-		},
-		{
 			"include": "#shebang"
+		},
+		{
+			"include": "#wei"
 		},
 		{
 			"include": "#statements"
@@ -73,6 +56,42 @@
 		}
 	],
 	"repository": {
+		"wei": {
+			"comment": "wei 语句",
+			"match": "\\b(wei)\\b\\.\\b(import|export|filename)\\b",
+			"captures": {
+				"1":{
+					"name": "keyword.other.weilang"
+				},
+				"2": {
+					"name": "constant.language.weilang"
+				}
+			}
+		},
+		"function_other": {
+			"patterns": [
+				{
+					"comment": "函数调用",
+					"match": "(\\w+)\\(",
+					"name": "meta.function-call.weilang entity.name.function.weilang"
+				},
+				{
+					"comment": "函数定义",
+					"match": "^\\b(con|var)\\b\\s+(\\w+)\\s+=\\s+(\\bfn\\b)\\(",
+					"captures": {
+						"1": {
+							"name": "keyword.con.weilang"
+						},
+						"2": {
+							"name": "entity.name.function.weilang"
+						},
+						"3": {
+							"name": "keyword.function.weilang"
+						}
+					}
+				}
+			]
+		},
 		"brackets": {
 			"patterns": [
 				{
@@ -224,7 +243,7 @@
 				}
 			]
 		},
-		"single-line-comment":{
+		"single-line-comment": {
 			"name": "comment.line.double-slash.weilang",
 			"begin": "(\\/\\/)",
 			"beginCaptures": {
@@ -243,7 +262,7 @@
 					"include": "#single_string"
 				},
 				{
-					"include":"#raw_string"
+					"include": "#raw_string"
 				}
 			]
 		},

@@ -13,7 +13,7 @@ func TestWeiOperation(t *testing.T) {
 	}{
 		{`wei.hello`, "undefined: 'wei.hello'", true},
 		{`wei.filename`, "", false},
-		{`wei.import('notfound')`, "Not found module filename: notfound", true},
+		{`wei.import('notfound')`, "Not found module: notfound", true},
 	}
 
 	for _, tt := range tests {
