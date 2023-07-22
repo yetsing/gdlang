@@ -17,7 +17,7 @@ con add = fn(x, y) {
 };
 
 var result = add(five, ten);
- -/*5;
+ -/ *5;
 5 < 10 > 5;
 5 <= 10 >= 5;
 
@@ -58,6 +58,11 @@ not and or null
 con a = wei.import('abc')
 wei.export(a)
 for in
+# another comment
+/*ddd*/
+/*
+abc
+*/
 `
 
 	tests := []struct {
@@ -719,6 +724,30 @@ for in
 		{
 			expectedType:    token.IN,
 			expectedLiteral: "in",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.COMMENT,
+			expectedLiteral: " another comment",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.COMMENT,
+			expectedLiteral: "ddd",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.COMMENT,
+			expectedLiteral: "\nabc\n",
 		},
 		{
 			expectedType:    token.NEWLINE,

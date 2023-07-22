@@ -239,19 +239,41 @@
 		"comment": {
 			"patterns": [
 				{
-					"include": "#single-line-comment"
+					"name": "comment.block.weilang",
+					"begin": "(\\/\\*)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.weilang"
+						}
+					},
+					"end": "(\\*\\/)",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.weilang"
+						}
+					}
+				},
+				{
+					"name": "comment.line.double-slash.weilang",
+					"begin": "(\\/\\/)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.weilang"
+						}
+					},
+					"end": "(?:\\n|$)"
+				},
+				{
+					"name": "comment.line.number-sign.weilang",
+					"begin": "(\\#)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.weilang"
+						}
+					},
+					"end": "(?:\\n|$)"
 				}
 			]
-		},
-		"single-line-comment": {
-			"name": "comment.line.double-slash.weilang",
-			"begin": "(\\/\\/)",
-			"beginCaptures": {
-				"1": {
-					"name": "punctuation.definition.comment.weilang"
-				}
-			},
-			"end": "(?:\\n|$)"
 		},
 		"strings": {
 			"patterns": [

@@ -115,10 +115,22 @@ func (l *Lexer) readToken() token.Token {
 		}
 	case '/':
 		if l.peekCharIs('/') {
+			// 跳过开头的 // 两个字符
+			l.readChar()
+			l.readChar()
 			return l.readComment()
+		} else if l.peekCharIs('*') {
+			// 跳过开头的 /* 两个字符
+			l.readChar()
+			l.readChar()
+			return l.readMultilineComment()
 		} else {
 			ttype = token.SLASH
 		}
+	case '#':
+		// 跳过开头的 # 字符
+		l.readChar()
+		return l.readComment()
 	case '*':
 		ttype = token.ASTERISK
 	case '%':
@@ -496,9 +508,6 @@ func (l *Lexer) readRawString() token.Token {
 }
 
 func (l *Lexer) readComment() token.Token {
-	// 跳过开头的 // 两个字符
-	l.readChar()
-	l.readChar()
 	l.mark()
 	for {
 		if l.ch == '\n' || l.ch == 0 {
@@ -507,6 +516,21 @@ func (l *Lexer) readComment() token.Token {
 		l.readChar()
 	}
 	return l.buildToken(token.COMMENT)
+}
+
+func (l *Lexer) readMultilineComment() token.Token {
+	l.mark()
+	for {
+		if l.ch == '*' || l.peekCharIs('/') {
+			break
+		}
+		l.readChar()
+	}
+	tk := l.buildToken(token.COMMENT)
+	// 跳过结束的 */ 字符
+	l.readChar()
+	l.readChar()
+	return tk
 }
 
 // 参考 Python 的规则 https://docs.python.org/3/reference/lexical_analysis.html#identifiers
