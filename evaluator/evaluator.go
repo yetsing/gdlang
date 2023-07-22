@@ -77,6 +77,14 @@ func Eval(
 	case *ast.ForInStatement:
 		return evalForInStatement(ctx, state, node, env)
 
+	case *ast.FunctionDefineStatement:
+		function := object.NewFunction(node.Function, env)
+		ret := env.Add(node.Function.Name, function, true)
+		if IsError(ret) {
+			state.HandleError(ret)
+		}
+		return ret
+
 	case *ast.WeiExportStatement:
 		return evalExport(ctx, state, env, node.Names)
 

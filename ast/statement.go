@@ -287,6 +287,23 @@ func (f *ForInStatement) GetFileLocation() *FileLocation {
 	return f.Location
 }
 
+type FunctionDefineStatement struct {
+	Location *FileLocation
+	Token    token.Token
+	Function *FunctionLiteral
+}
+
+func (fs *FunctionDefineStatement) statementNode() {}
+
+func (fs *FunctionDefineStatement) TokenLiteral() string { return fs.Token.Literal }
+
+func (fs *FunctionDefineStatement) String() string {
+	return fs.Function.String()
+}
+func (fs *FunctionDefineStatement) GetFileLocation() *FileLocation {
+	return fs.Location
+}
+
 type WeiExportStatement struct {
 	Location *FileLocation
 	Token    token.Token

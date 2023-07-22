@@ -253,6 +253,36 @@ func TestFunctionObject(t *testing.T) {
 	}
 }
 
+func TestNamedFunctionObject(t *testing.T) {
+	input := "fn ddd(x) { x + 2; };"
+
+	evaluated := testEval(t, input)
+	fn, ok := evaluated.(*object.Function)
+	if !ok {
+		t.Fatalf("object is not Function. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	expectedName := "ddd"
+	if fn.Name != expectedName {
+		t.Fatalf("function name expected %q, got=%q", expectedName, fn.Name)
+	}
+
+	if len(fn.Parameters) != 1 {
+		t.Fatalf("function has wrong parameters. Parameters=%+v",
+			fn.Parameters)
+	}
+
+	if fn.Parameters[0].String() != "x" {
+		t.Fatalf("parameter is not 'x'. got=%q", fn.Parameters[0])
+	}
+
+	expectedBody := "{\n(x + 2)\n}"
+
+	if fn.Body.String() != expectedBody {
+		t.Fatalf("body is not %q. got=%q", expectedBody, fn.Body.String())
+	}
+}
+
 func TestFunctionApplication(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -260,8 +290,11 @@ func TestFunctionApplication(t *testing.T) {
 	}{
 		{"var identity = fn(x) { return x; }; identity(5);", 5},
 		{"var double = fn(x) { return x * 2; }; double(5);", 10},
+		{"fn double(x) { return x * 2; }; double(5);", 10},
 		{"var add = fn(x, y) { return x + y; }; add(5, 5);", 10},
+		{"fn add(x, y) { return x + y; }; add(5, 5);", 10},
 		{"var add = fn(x, y) { return x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn add(x, y) { return x + y; }; add(5 + 5, add(5, 5));", 20},
 		{"fn(x) { return x; }(5)", 5},
 		{"var a = 10; fn(x) { var a = 4; }(10); a", 10},
 		{"con a = 10; fn(a) { return a }(30)", 30},

@@ -17,8 +17,10 @@ import (
 
 // 用来保存解析器 dump 后的信息
 type dumpInfo struct {
-	index int
-	token token.Token
+	parenCount int
+	whileStack []int
+	index      int
+	token      token.Token
 }
 
 type Parser struct {
@@ -44,9 +46,6 @@ type Parser struct {
 	//   }
 	// }
 	whileStack []int
-	// 保存 token 用于回溯
-	backupTokens       []token.Token
-	backupTokenEnabled bool
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -143,6 +142,7 @@ func (p *Parser) isStatementEnd() bool {
 // | continue_statement
 // | break_statement
 // | wei_export_statement
+// | function_define_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
@@ -178,9 +178,66 @@ func (p *Parser) statement() (ast.Statement, error) {
 		}
 		p.restore(info)
 		return p.expressionStatement()
+	case token.FUNCTION:
+		stmt, err := p.expressionStatement()
+		if err == nil {
+			return stmt, nil
+		}
+		p.restore(info)
+		return p.functionDefineStatement()
 	default:
 		return p.expressionStatement()
 	}
+}
+
+// function_define_statement ::= "fn" IDENT "(" parameter_list ")" block_statement (";" | NEWLINE)
+func (p *Parser) functionDefineStatement() (*ast.FunctionDefineStatement, error) {
+	location := p.currFileLocation()
+	tok := p.currToken
+	err := p.eat(token.FUNCTION)
+	if err != nil {
+		return nil, err
+	}
+	name := p.currToken.Literal
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	p.parenCount++
+	paramters, err := p.parameterList()
+	if err != nil {
+		return nil, err
+	}
+	p.parenCount--
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	p.whileStack = append(p.whileStack, 0)
+	block, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.NEWLINE)
+	}
+	p.whileStack = p.whileStack[:len(p.whileStack)-1]
+	fs := &ast.FunctionDefineStatement{
+		Location: location,
+		Token:    tok,
+		Function: &ast.FunctionLiteral{
+			Location:   location,
+			Token:      tok,
+			Name:       name,
+			Parameters: paramters,
+			Body:       block,
+		},
+	}
+	return fs, nil
 }
 
 // for_in_statement ::= "for" "(" ("var" | "con") IDENT ("," IDENT)* "in" expression ")" block_statement  (";" | NEWLINE)
@@ -1261,11 +1318,11 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.parenCount++
 	err = p.eat(token.LPAREN)
 	if err != nil {
 		return nil, err
 	}
+	p.parenCount++
 	paramters, err := p.parameterList()
 	if err != nil {
 		return nil, err
@@ -1420,15 +1477,21 @@ func (p *Parser) eat(t token.TokenType) error {
 }
 
 func (p *Parser) dump() *dumpInfo {
+	stack := make([]int, len(p.whileStack))
+	copy(stack, p.whileStack)
 	return &dumpInfo{
-		index: p.l.Dump(),
-		token: p.currToken,
+		parenCount: p.parenCount,
+		whileStack: stack,
+		index:      p.l.Dump(),
+		token:      p.currToken,
 	}
 }
 
 func (p *Parser) restore(info *dumpInfo) {
 	p.l.Restore(info.index)
 	p.currToken = info.token
+	p.parenCount = info.parenCount
+	p.whileStack = info.whileStack
 }
 
 func (p *Parser) nextToken() {

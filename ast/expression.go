@@ -154,7 +154,10 @@ func (fl *FunctionLiteral) String() string {
 		params = append(params, p.String())
 	}
 
-	out.WriteString(fl.TokenLiteral())
+	out.WriteString("fn")
+	if fl.Name != "<anonymous>" {
+		out.WriteString(" " + fl.Name)
+	}
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") ")
