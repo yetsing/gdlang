@@ -457,6 +457,7 @@ func evalFunction(
 		extendedEnv := extendFunctionEnv(function, args)
 		extendedEnv.Pass("this", fn.This(), true)
 		extendedEnv.Pass("cls", fn.Class(), true)
+		extendedEnv.Pass("super", fn.Super(), true)
 		location := function.Body.GetFileLocation()
 		state.CreateFrame(location.Filename, function.Name)
 		evaluated := Eval(ctx, state, function.Body, extendedEnv)
@@ -472,6 +473,7 @@ func evalFunction(
 		}
 		extendedEnv := extendFunctionEnv(function, args)
 		extendedEnv.Pass("cls", fn.Class(), true)
+		extendedEnv.Pass("super", fn.Super(), true)
 		location := function.Body.GetFileLocation()
 		state.CreateFrame(location.Filename, function.Name)
 		evaluated := Eval(ctx, state, function.Body, extendedEnv)

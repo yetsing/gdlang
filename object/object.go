@@ -25,6 +25,7 @@ const (
 	INSTANCE_OBJ             = "instance_obj"
 	BOUND_CLASS_METHOD_OBJ   = "bound_class_method"
 	BOUND_METHOD_OBJ         = "bound_method"
+	SUPER_OBJ                = "super"
 	WEI_OBJ                  = "wei"
 )
 

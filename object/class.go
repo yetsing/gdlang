@@ -59,6 +59,7 @@ func (c *Class) getAttribute(cls *Class, name string) Object {
 
 	if val, ok := c.classMethods[name]; ok {
 		return &BoundClassMethod{
+			define:   c,
 			cls:      cls,
 			function: val,
 		}
@@ -69,12 +70,16 @@ func (c *Class) getAttribute(cls *Class, name string) Object {
 	return attributeError(c.String(), name)
 }
 
-func (c *Class) getMethod(name string) *Function {
+func (c *Class) getMethod(ins *Instance, name string) *BoundMethod {
 	if val, ok := c.methods[name]; ok {
-		return val
+		return &BoundMethod{
+			define:   c,
+			this:     ins,
+			function: val,
+		}
 	}
 	if c.parent != nil {
-		return c.parent.getMethod(name)
+		return c.parent.getMethod(ins, name)
 	}
 	return nil
 }
@@ -186,12 +191,9 @@ func (ins *Instance) GetAttribute(name string) Object {
 		return val
 	}
 
-	val := ins.class.getMethod(name)
+	val := ins.class.getMethod(ins, name)
 	if val != nil {
-		return &BoundMethod{
-			this:     ins,
-			function: val,
-		}
+		return val
 	}
 	return attributeError(ins.String(), name)
 }
@@ -201,14 +203,8 @@ func (ins *Instance) SetMember(name string, value Object) {
 }
 
 func (ins *Instance) GetMethod(name string) *BoundMethod {
-	method := ins.class.getMethod(name)
-	if method == nil {
-		return nil
-	}
-	return &BoundMethod{
-		this:     ins,
-		function: method,
-	}
+	method := ins.class.getMethod(ins, name)
+	return method
 }
 
 // Ready 检查实例初始化情况，并且做一些通用的初始化工作
@@ -251,6 +247,8 @@ func NewInstance(class *Class) *Instance {
 
 // BoundClassMethod 绑定具体类的类方法
 type BoundClassMethod struct {
+	// define 方法定义所在的类
+	define   *Class
 	cls      *Class
 	function *Function
 }
@@ -279,8 +277,18 @@ func (b *BoundClassMethod) Class() *Class {
 	return b.cls
 }
 
+func (b *BoundClassMethod) Super() *Super {
+	return &Super{
+		define: b.define,
+		cls:    b.cls,
+		this:   nil,
+	}
+}
+
 // BoundMethod 绑定具体实例的方法
 type BoundMethod struct {
+	// define 方法定义所在的类
+	define   *Class
 	this     *Instance
 	function *Function
 }
@@ -311,4 +319,80 @@ func (b *BoundMethod) This() *Instance {
 
 func (b *BoundMethod) Class() *Class {
 	return b.this.class
+}
+
+func (b *BoundMethod) Super() *Super {
+	return &Super{
+		define: b.define,
+		cls:    nil,
+		this:   b.this,
+	}
+}
+
+/*
+super 指向代码块所在类的父类，只支持访问实例方法、类属性、类方法
+例子如下
+
+class A {
+  fn get() {}
+}
+class B(A) {
+  fn get() {super.get()}
+}
+class C(B) {
+  fn get() {super.get()}
+}
+
+C.get 里面的 super 指着是 B
+B.get 里面的 super 指着是 A
+
+*/
+
+// Super super 只支持访问实例方法、类属性、类方法，
+// 因为实例属性是绑定在实例上的，他的属性值没有父类子类一说；而另外三个则是跟类有关系。
+type Super struct {
+	// super 代码所在的类
+	define *Class
+	// 当前调用的类和实例
+	cls  *Class
+	this *Instance
+}
+
+func (s *Super) Type() ObjectType {
+	return SUPER_OBJ
+}
+
+func (s *Super) TypeIs(objectType ObjectType) bool {
+	return s.Type() == objectType
+}
+
+func (s *Super) TypeNotIs(objectType ObjectType) bool {
+	return s.Type() != objectType
+}
+
+func (s *Super) String() string {
+	if s.cls != nil {
+		return fmt.Sprintf("<%s super in %s)>", s.cls.String(), s.define.String())
+	} else {
+		return fmt.Sprintf("<%s super in %s)>", s.this.String(), s.define.String())
+	}
+}
+
+// GetAttribute 只支持访问实例方法、类属性、类方法，
+// 因为实例属性是绑定在实例上的，他的属性值没有父类子类一说；而另外三个则是跟类有关系。
+func (s *Super) GetAttribute(name string) Object {
+	// 这里的 parent 不可能是 nil ，我们会创建一个内置 object 作为继承链的终点
+	parent := s.define.parent
+	if s.cls != nil {
+		// 类属性和类方法
+		return parent.getAttribute(s.cls, name)
+	} else {
+		// 实例方法
+		return parent.getMethod(s.this, name)
+	}
+}
+
+//goland:noinspection GoUnusedParameter
+func (s *Super) SetAttribute(name string, value Object) Object {
+	return NewError("super does not support set attribute")
 }

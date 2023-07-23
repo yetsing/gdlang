@@ -46,28 +46,28 @@ Foo.a`,
 			true},
 		{`
 class Foo {
-var abc
+	var abc
 }
 Foo.abc`,
 			"'<class Foo>' object has not attribute 'abc'",
 			true},
 		{`
 class Foo {
-var class.abc = 1
+	var class.abc = 1
 }
 Foo.abc`,
 			1,
 			false},
 		{`
 class Foo {
-con class.abc = 1
+	con class.abc = 1
 }
 Foo.abc = 2`,
 			"cannot assign to constant attribute: 'abc'",
 			true},
 		{`
 class Foo {
-var class.abc = 1
+	var class.abc = 1
 }
 Foo.abc = 2
 Foo.abc`,
@@ -75,7 +75,7 @@ Foo.abc`,
 			false},
 		{`
 class Foo {
-var abc = 1
+	var abc = 1
 }
 var foo = Foo(1)
 foo.abc`,
@@ -83,8 +83,8 @@ foo.abc`,
 			true},
 		{`
 class Foo {
-var abc = 1
-fn __init__(a) {}
+	var abc = 1
+	fn __init__(a) {}
 }
 var foo = Foo()
 foo.abc`,
@@ -92,7 +92,7 @@ foo.abc`,
 			true},
 		{`
 class Foo {
-var abc
+	var abc
 }
 var foo = Foo()
 `,
@@ -100,7 +100,7 @@ var foo = Foo()
 			true},
 		{`
 class Foo {
-var abc = 1
+	var abc = 1
 }
 var foo = Foo()
 foo.abc`,
@@ -108,9 +108,9 @@ foo.abc`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn get() {return this.abc}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn get() {return this.abc}
 }
 var foo = Foo(123)
 foo.abc`,
@@ -118,10 +118,10 @@ foo.abc`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn inc() {this.abc = this.abc + 1}
-fn get() {return this.abc}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn get() {return this.abc}
 }
 var foo = Foo(234)
 foo.inc()
@@ -130,10 +130,10 @@ foo.get()`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn inc() {this.abc = this.abc + 1}
-fn class.get() {return 111}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn class.get() {return 111}
 }
 var foo = Foo(234)
 foo.inc()
@@ -142,11 +142,11 @@ Foo.get()`,
 			false},
 		{`
 class Foo {
-var abc = 1
-var class.d = 2
-fn __init__(abc) {this.abc = abc}
-fn inc() {this.abc = this.abc + 1}
-fn class.get() {return cls.d + 100}
+	var abc = 1
+	var class.d = 2
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn class.get() {return cls.d + 100}
 }
 var foo = Foo(234)
 Foo.get()`,
@@ -154,11 +154,11 @@ Foo.get()`,
 			false},
 		{`
 class Foo {
-var abc = 1
-var class.d = 1
-fn __init__(abc) {this.abc = abc}
-fn class.inc() {cls.d = cls.d + 1}
-fn class.get() {return cls.d + 100}
+	var abc = 1
+	var class.d = 1
+	fn __init__(abc) {this.abc = abc}
+	fn class.inc() {cls.d = cls.d + 1}
+	fn class.get() {return cls.d + 100}
 }
 var foo = Foo(234)
 Foo.inc()
@@ -167,11 +167,11 @@ Foo.get()`,
 			false},
 		{`
 class Foo {
-var abc = 1
-con class.d = 1
-fn __init__(abc) {this.abc = abc}
-fn class.inc() {cls.d = cls.d + 1}
-fn class.get() {return cls.d + 100}
+	var abc = 1
+	con class.d = 1
+	fn __init__(abc) {this.abc = abc}
+	fn class.inc() {cls.d = cls.d + 1}
+	fn class.get() {return cls.d + 100}
 }
 var foo = Foo(234)
 Foo.inc()
@@ -181,7 +181,7 @@ Foo.get()`,
 
 		{`
 class Foo {
-var class.abc = 1
+	var class.abc = 1
 }
 class Goo(Foo){}
 Goo.abc`,
@@ -189,7 +189,7 @@ Goo.abc`,
 			false},
 		{`
 		class Foo {
-		var class.abc = 1
+			var class.abc = 1
 		}
 		class Goo(Foo){}
 		Goo.abc = 2
@@ -198,7 +198,7 @@ Goo.abc`,
 			false},
 		{`
 		class Foo {
-		var class.abc = 1
+			var class.abc = 1
 		}
 		class Goo(Foo){}
 		Goo.abc = 2
@@ -207,17 +207,17 @@ Goo.abc`,
 			false},
 		{`
 		class Foo {
-		var class.abc = 1
+			var class.abc = 1
 		}
 		class Goo(Foo){}
-class Hoo(Foo){}
+		class Hoo(Foo){}
 		Goo.abc = 2
 		Hoo.abc`,
 			2,
 			false},
 		{`
 class Foo {
-var abc = 1
+	var abc = 1
 }
 class Goo(Foo) {}
 var obj = Goo()
@@ -229,7 +229,7 @@ class Foo {
 var abc = 1
 }
 class Goo(Foo) {
-fn __init__(n) {this.abc = n}
+	fn __init__(n) {this.abc = n}
 }
 var obj = Goo(234)
 obj.abc`,
@@ -237,9 +237,9 @@ obj.abc`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn get() {return this.abc}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn get() {return this.abc}
 }
 class Goo(Foo) {}
 var obj = Goo(123)
@@ -248,10 +248,10 @@ obj.abc`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn inc() {this.abc = this.abc + 1}
-fn get() {return this.abc}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn get() {return this.abc}
 }
 class Goo(Foo) {}
 var obj = Goo(234)
@@ -261,18 +261,67 @@ obj.get()`,
 			false},
 		{`
 class Foo {
-var abc = 1
-fn __init__(abc) {this.abc = abc}
-fn inc() {this.abc = this.abc + 1}
-fn get() {return this.abc}
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn get() {return this.abc}
 }
 class Goo(Foo) {
-fn inc() {this.abc = this.abc + 100}
+	fn inc() {this.abc = this.abc + 100}
 }
 var obj = Goo(234)
 obj.inc()
 obj.get()`,
 			334,
+			false},
+		{`
+class Foo {
+	var class.abc = 1
+}
+class Goo(Foo) {
+	fn class.get() {return super.abc}
+}
+Goo.get()`,
+			1,
+			false},
+		{`
+class Foo {
+	var class.abc = 1
+}
+class Goo(Foo) {
+	fn class.set() {super.abc = 2}
+}
+Goo.set()`,
+			"super does not support set attribute",
+			true},
+		{`
+class Foo {
+	var class.abc = 1
+	fn class.get() {return 0}
+}
+class Goo(Foo) {
+	fn class.get() {return super.get() + 123}
+}
+Goo.get()`,
+			123,
+			false},
+		{`
+class Foo {
+	var abc = 1
+	fn __init__(abc) {this.abc = abc}
+	fn inc() {this.abc = this.abc + 1}
+	fn get() {return this.abc}
+}
+class Goo(Foo) {
+	fn inc() {
+	  super.inc()
+	  this.abc = this.abc + 1
+	}
+}
+var obj = Goo(234)
+obj.inc()
+obj.get()`,
+			236,
 			false},
 	}
 
