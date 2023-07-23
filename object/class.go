@@ -223,6 +223,10 @@ func (ins *Instance) Ready() Object {
 	return ins
 }
 
+func (ins *Instance) ClassName() string {
+	return ins.class.Name
+}
+
 func NewInstance(class *Class) *Instance {
 	var inheritList []*Class
 	cls := class

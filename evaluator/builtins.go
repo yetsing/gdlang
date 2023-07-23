@@ -122,7 +122,12 @@ func _type(args ...object.Object) object.Object {
 	}
 
 	arg := args[0]
-	return object.NewString(string(arg.Type()))
+	switch arg := arg.(type) {
+	case *object.Instance:
+		return object.NewString(arg.ClassName())
+	default:
+		return object.NewString(string(arg.Type()))
+	}
 }
 
 var builtins = map[string]*object.Builtin{
