@@ -193,7 +193,7 @@ func (p *Parser) statement() (ast.Statement, error) {
 	}
 }
 
-// class_define_statement ::= "class" IDENT class_block_statement
+// class_define_statement ::= "class" IDENT ["(" IDENT ")"] class_block_statement
 func (p *Parser) classDefineStatement() (*ast.ClassDefineStatement, error) {
 	location := p.currFileLocation()
 	tok := p.currToken
@@ -206,6 +206,21 @@ func (p *Parser) classDefineStatement() (*ast.ClassDefineStatement, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var parent *ast.Identifier
+	// 解析父类
+	if p.currTokenIs(token.LPAREN) {
+		p.nextToken()
+		parent, err = p.ident()
+		if err != nil {
+			return nil, err
+		}
+		err = p.eat(token.RPAREN)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	body, err := p.classBlockStatement()
 	if err != nil {
 		return nil, err
@@ -217,6 +232,7 @@ func (p *Parser) classDefineStatement() (*ast.ClassDefineStatement, error) {
 		Location: location,
 		Token:    tok,
 		Name:     name,
+		Parent:   parent,
 		Body:     body,
 	}
 	return stmt, nil

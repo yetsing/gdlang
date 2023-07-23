@@ -83,7 +83,7 @@ STRING_LIT: 字符串，包括 "" '' `` 三种引号
 BOOL_LIT: 布尔值，只有 true false
 NULL_LIT: 空值，只有 null
 
-class_define_statement ::= "class" IDENT class_block_statement
+class_define_statement ::= "class" IDENT ["(" IDENT ")"] class_block_statement
 class_block_statement ::= "{" (class_statement)* "}"
 class_statement ::= class_variable_declaration_statement | class_method_define_statement
 class_variable_declaration_statement ::= ("var" | "con") (IDENT ["=" expression] | "class" "." "=" "expression") (";" | NEWLINE)

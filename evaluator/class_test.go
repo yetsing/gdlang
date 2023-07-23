@@ -178,6 +178,102 @@ Foo.inc()
 Foo.get()`,
 			"cannot assign to constant attribute: 'd'",
 			true},
+
+		{`
+class Foo {
+var class.abc = 1
+}
+class Goo(Foo){}
+Goo.abc`,
+			1,
+			false},
+		{`
+		class Foo {
+		var class.abc = 1
+		}
+		class Goo(Foo){}
+		Goo.abc = 2
+		Goo.abc`,
+			2,
+			false},
+		{`
+		class Foo {
+		var class.abc = 1
+		}
+		class Goo(Foo){}
+		Goo.abc = 2
+		Foo.abc`,
+			2,
+			false},
+		{`
+		class Foo {
+		var class.abc = 1
+		}
+		class Goo(Foo){}
+class Hoo(Foo){}
+		Goo.abc = 2
+		Hoo.abc`,
+			2,
+			false},
+		{`
+class Foo {
+var abc = 1
+}
+class Goo(Foo) {}
+var obj = Goo()
+obj.abc`,
+			1,
+			false},
+		{`
+class Foo {
+var abc = 1
+}
+class Goo(Foo) {
+fn __init__(n) {this.abc = n}
+}
+var obj = Goo(234)
+obj.abc`,
+			234,
+			false},
+		{`
+class Foo {
+var abc = 1
+fn __init__(abc) {this.abc = abc}
+fn get() {return this.abc}
+}
+class Goo(Foo) {}
+var obj = Goo(123)
+obj.abc`,
+			123,
+			false},
+		{`
+class Foo {
+var abc = 1
+fn __init__(abc) {this.abc = abc}
+fn inc() {this.abc = this.abc + 1}
+fn get() {return this.abc}
+}
+class Goo(Foo) {}
+var obj = Goo(234)
+obj.inc()
+obj.get()`,
+			235,
+			false},
+		{`
+class Foo {
+var abc = 1
+fn __init__(abc) {this.abc = abc}
+fn inc() {this.abc = this.abc + 1}
+fn get() {return this.abc}
+}
+class Goo(Foo) {
+fn inc() {this.abc = this.abc + 100}
+}
+var obj = Goo(234)
+obj.inc()
+obj.get()`,
+			334,
+			false},
 	}
 
 	for _, tt := range tests {

@@ -6,7 +6,9 @@ import (
 
 // Class 对应用户定义的类
 type Class struct {
-	Name       string
+	Name string
+	// parent 父类
+	parent     *Class
 	members    map[string]Object
 	methods    map[string]*Function
 	conMembers map[string]bool
@@ -40,26 +42,39 @@ func (c *Class) SetAttribute(name string, value Object) Object {
 		c.classMembers[name] = value
 		return nil
 	}
+	if c.parent != nil {
+		return c.parent.SetAttribute(name, value)
+	}
 	return attributeError(c.String(), name)
 }
 
 func (c *Class) GetAttribute(name string) Object {
+	return c.getAttribute(c, name)
+}
+
+func (c *Class) getAttribute(cls *Class, name string) Object {
 	if val, ok := c.classMembers[name]; ok {
 		return val
 	}
 
 	if val, ok := c.classMethods[name]; ok {
 		return &BoundClassMethod{
-			cls:      c,
+			cls:      cls,
 			function: val,
 		}
+	}
+	if c.parent != nil {
+		return c.parent.getAttribute(cls, name)
 	}
 	return attributeError(c.String(), name)
 }
 
-func (c *Class) GetMethod(name string) *Function {
+func (c *Class) getMethod(name string) *Function {
 	if val, ok := c.methods[name]; ok {
 		return val
+	}
+	if c.parent != nil {
+		return c.parent.getMethod(name)
 	}
 	return nil
 }
@@ -116,9 +131,10 @@ func (c *Class) AddClassMethod(name string, function *Function) Object {
 	return nil
 }
 
-func NewClass(name string) *Class {
+func NewClass(name string, parent *Class) *Class {
 	return &Class{
 		Name:            name,
+		parent:          parent,
 		members:         make(map[string]Object),
 		methods:         make(map[string]*Function),
 		conMembers:      make(map[string]bool),
@@ -170,7 +186,7 @@ func (ins *Instance) GetAttribute(name string) Object {
 		return val
 	}
 
-	val := ins.class.GetMethod(name)
+	val := ins.class.getMethod(name)
 	if val != nil {
 		return &BoundMethod{
 			this:     ins,
@@ -185,7 +201,7 @@ func (ins *Instance) SetMember(name string, value Object) {
 }
 
 func (ins *Instance) GetMethod(name string) *BoundMethod {
-	method := ins.class.GetMethod(name)
+	method := ins.class.getMethod(name)
 	if method == nil {
 		return nil
 	}
@@ -195,7 +211,7 @@ func (ins *Instance) GetMethod(name string) *BoundMethod {
 	}
 }
 
-// 检查实例初始化情况，并且做一些通用的初始化工作
+// Ready 检查实例初始化情况，并且做一些通用的初始化工作
 func (ins *Instance) Ready() Object {
 	for s, object := range ins.members {
 		if object == nil {
@@ -203,13 +219,24 @@ func (ins *Instance) Ready() Object {
 		}
 	}
 	ins.inInit = false
+	ins.SetMember("__class__", ins.class)
 	return ins
 }
 
 func NewInstance(class *Class) *Instance {
+	var inheritList []*Class
+	cls := class
+	for cls != nil {
+		inheritList = append(inheritList, cls)
+		cls = cls.parent
+	}
+
 	m := make(map[string]Object, len(class.members))
-	for s, object := range class.members {
-		m[s] = object
+	for i := len(inheritList) - 1; i >= 0; i-- {
+		cls = inheritList[i]
+		for s, object := range cls.members {
+			m[s] = object
+		}
 	}
 	ins := &Instance{
 		class:   class,

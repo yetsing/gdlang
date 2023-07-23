@@ -12,7 +12,16 @@ func evalClassDefine(
 	env *object.Environment,
 	node *ast.ClassDefineStatement,
 ) object.Object {
-	cls := object.NewClass(node.Name)
+	var parent *object.Class
+	if node.Parent != nil {
+		val := evalIdentifier(ctx, node.Parent, env)
+		var ok bool
+		parent, ok = val.(*object.Class)
+		if !ok {
+			return state.NewError("%s is not class", node.Parent.Value)
+		}
+	}
+	cls := object.NewClass(node.Name, parent)
 	err := env.Add(node.Name, cls, true)
 	if IsError(err) {
 		state.HandleError(err)

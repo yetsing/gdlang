@@ -404,9 +404,10 @@ func (cb *ClassBlockStatement) GetFileLocation() *FileLocation {
 type ClassDefineStatement struct {
 	Location *FileLocation
 	// "class" token
-	Token token.Token
-	Name  string
-	Body  *ClassBlockStatement
+	Token  token.Token
+	Name   string
+	Parent *Identifier
+	Body   *ClassBlockStatement
 }
 
 func (cd *ClassDefineStatement) statementNode() {}
