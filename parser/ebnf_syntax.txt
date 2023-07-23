@@ -1,0 +1,90 @@
+weilang 语言 ebnf 格式的语法
+
+program ::= (statement)* EOF
+
+block_statement ::= "{" (statement)* "}"
+
+statement ::= var_statement | con_statement
+    | for_in_statement
+    | if_statement
+    | return_statement
+    | expression_statement
+    | assign_statement
+    | while_statement
+    | continue_statement
+    | break_statement
+    | wei_export_statement
+    | function_define_statement
+    | class_define_statement
+
+var_statement ::= "var" IDENT "=" expression (";" | NEWLINE)
+
+con_statement ::= "con" IDENT "=" expression (";" | NEWLINE)
+
+function_define_statement ::= "fn" IDENT "(" parameter_list ")" block_statement (";" | NEWLINE)
+
+for_in_statement ::= "for" "(" ("var" | "con") IDENT ("," IDENT)* "in" expression ")" block_statement  (";" | NEWLINE)
+
+wei_export_statement ::= "wei" "." "export" "(" [wei_export_args] ")"
+wei_export_args      ::= IDENT (,IDENT)*
+
+return_statement ::= "return" ( expression ) (";" | NEWLINE)
+
+if_statement ::= if_branch (else_if_branch)* [else_branch]  (";" | NEWLINE)
+if_branch      ::= "if" "(" expression ")" block_statement
+else_if_branch ::= "else" if_branch
+else_branch    ::= "else" block_statement
+if_branch      ::= "if" "(" expression ")" block_statement
+
+while_statement ::= "while" "(" expression ")" block_statement  (";" | NEWLINE)
+
+continue_statement ::= "continue" (";" | NEWLINE)
+break_statement ::= "break" (";" | NEWLINE)
+
+assign_statement ::= primary "=" expression (";" | NEWLINE)
+primary          ::= IDENT ( subscription | attribute)*
+subscription     ::= "[" expression "]"
+attribute        ::= "." IDENT
+
+expression_statement ::= expression (";" | NEWLINE)
+
+expression ::= orExpression
+or_expression ::= and_expression ("or" and_expression)*
+and_expression ::= not_expression ("and" not_expression)*
+not_expression ::= comparison_expression | "not" not_expression
+comparison_expression ::= bitwise_xor_expression (("<" | "<=" | ">" | ">=" | "!=" | "==" ) bitwise_xor_expression)*
+bitwise_or_expression ::= bitwise_xor_expression ( "|" bitwise_xor_expression)*
+bitwise_xor_expression ::= bitwise_and_expression ( "^" bitwise_and_expression)*
+bitwise_and_expression ::= shift_expression ( "&" shift_expression)*
+shift_expression ::= plus_expression (( "<<" | ">>" ) plus_expression)*
+plus_expression ::= multiplication_expression (("+" | "-") multiplication_expression)*
+multiply_expression ::= unary_expression (("*" | "/" | "%") unary_expression)*
+unary_expression ::= primary_expression | ["-" | "+" | "~"] unary_expression
+primary_expression ::= atom ( subscription | attribute | call)*
+subscription       ::= "[" expression "]"
+attribute          ::= "." IDENT
+call               ::= "(" [argument_list] ")"
+argument_list      ::= expression ("," expression)* [","]
+atom ::= IDENT | INT_LIT | STRING_LIT | BOOL_LIT | NULL_LIT
+    | list_literal | dict_literal | function_literal | "(" expression ")"
+    | wei_expression
+list_literal ::= "[" [expression] ("," expression)* [","] "]"
+expression_list ::= [expression] ("," expression)* [","]
+dict_literal ::= "{" [ pairs ] "}"
+pairs        ::= [pair ("," pair)* [","]
+pair         ::= expression ":" expression
+function_literal ::= "fn" "(" parameter_list ")" block_statement
+parameter_list ::= [IDENT] ("," IDENT)* [","]
+wei_expression ::= ( "wei" "." IDENT ) | ( "wei" "." "import" "(" STRING_LIT ")" )
+
+IDENT: 开始字符属于 Lu Ll Lm Lt Lo Nl 类别 Unicode ，后续字符属于 Lu Ll Lm Lt Lo Nl Mn Mc Nd Pc
+INT_LIT: 0-9 整数，支持二进制、八进制、十六进制
+STRING_LIT: 字符串，包括 "" '' `` 三种引号
+BOOL_LIT: 布尔值，只有 true false
+NULL_LIT: 空值，只有 null
+
+class_define_statement ::= "class" IDENT class_block_statement
+class_block_statement ::= "{" (class_statement)* "}"
+class_statement ::= class_variable_declaration_statement | class_method_define_statement
+class_variable_declaration_statement ::= ("var" | "con") (IDENT ["=" expression] | "class" "." "=" "expression") (";" | NEWLINE)
+class_method_define_statement ::= "fn" ["class" "."] IDENT "(" parameter_list ")" block_statement (";" | NEWLINE)

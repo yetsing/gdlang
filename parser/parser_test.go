@@ -52,6 +52,33 @@ while (1) {
 		{
 			`wei."export"`,
 		},
+		{
+			`class Foo`,
+		},
+		{
+			`class Foo {} 
+var a =`,
+		},
+		{
+			`class Foo {
+var a var b
+} 
+`,
+		},
+		{
+			`class Foo {
+var a
+// some
+fn init() {} con d
+} 
+`,
+		},
+		{
+			`class Foo {
+var class.d
+} 
+`,
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -196,6 +223,7 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 	return true
 }
 
+//goland:noinspection GoUnusedFunction
 func testStringLiteral(t *testing.T, exp ast.Expression, value string) bool {
 	sl, ok := exp.(*ast.StringLiteral)
 	if !ok {

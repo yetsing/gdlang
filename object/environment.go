@@ -62,8 +62,11 @@ func (e *Environment) Set(name string, val Object) Object {
 }
 
 // Pass 用于函数调用传值、for-in 传值
-func (e *Environment) Pass(name string, val Object) Object {
+func (e *Environment) Pass(name string, val Object, isConstant bool) Object {
 	e.store[name] = val
+	if isConstant {
+		e.propertys[name] = true
+	}
 	return val
 }
 

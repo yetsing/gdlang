@@ -21,6 +21,10 @@ const (
 	BOUND_BUILTIN_METHOD_OBJ = "bound_builtin_method"
 	MODULE_OBJ               = "module"
 	TUPLE_OBJ                = "tuple"
+	CLASS_OBJ                = "class_obj"
+	INSTANCE_OBJ             = "instance_obj"
+	BOUND_CLASS_METHOD_OBJ   = "bound_class_method"
+	BOUND_METHOD_OBJ         = "bound_method"
 	WEI_OBJ                  = "wei"
 )
 

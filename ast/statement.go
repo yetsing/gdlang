@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"weilang/token"
 )
@@ -304,19 +305,135 @@ func (fs *FunctionDefineStatement) GetFileLocation() *FileLocation {
 	return fs.Location
 }
 
+type ClassVariableDeclarationStatement struct {
+	Location *FileLocation
+	Token    token.Token
+	Con      bool
+	Class    bool
+	Name     *Identifier
+	Expr     Expression
+}
+
+func (cv *ClassVariableDeclarationStatement) statementNode() {}
+
+func (cv *ClassVariableDeclarationStatement) TokenLiteral() string { return cv.Token.Literal }
+
+func (cv *ClassVariableDeclarationStatement) String() string {
+	var out bytes.Buffer
+
+	if cv.Con {
+		out.WriteString("con ")
+	} else {
+		out.WriteString("var ")
+	}
+	if cv.Class {
+		out.WriteString("class.")
+	}
+	out.WriteString(cv.Name.String())
+	if cv.Expr != nil {
+		out.WriteString(" = " + cv.Expr.String())
+	}
+	out.WriteString("\n")
+	return out.String()
+}
+func (cv *ClassVariableDeclarationStatement) GetFileLocation() *FileLocation {
+	return cv.Location
+}
+
+type ClassMethodDefineStatement struct {
+	Location *FileLocation
+	Token    token.Token
+	Class    bool
+	Function *FunctionLiteral
+}
+
+func (cm *ClassMethodDefineStatement) statementNode() {}
+
+func (cm *ClassMethodDefineStatement) TokenLiteral() string { return cm.Token.Literal }
+
+func (cm *ClassMethodDefineStatement) String() string {
+	var out bytes.Buffer
+
+	if cm.Class {
+		out.WriteString("class.")
+	}
+	out.WriteString(cm.Function.Name)
+
+	var params []string
+	for _, p := range cm.Function.Parameters {
+		params = append(params, p.String())
+	}
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") ")
+	out.WriteString(cm.Function.Body.String())
+
+	return out.String()
+}
+func (cm *ClassMethodDefineStatement) GetFileLocation() *FileLocation {
+	return cm.Location
+}
+
+type ClassBlockStatement struct {
+	Location   *FileLocation
+	Token      token.Token
+	Statements []Statement
+}
+
+func (cb *ClassBlockStatement) statementNode() {}
+
+func (cb *ClassBlockStatement) TokenLiteral() string { return cb.Token.Literal }
+
+func (cb *ClassBlockStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("{\n")
+	var lines []string
+	for _, statement := range cb.Statements {
+		lines = append(lines, statement.String())
+	}
+	out.WriteString(strings.Join(lines, "\n"))
+	out.WriteString("\n}")
+	out.WriteString("\n")
+	return out.String()
+}
+func (cb *ClassBlockStatement) GetFileLocation() *FileLocation {
+	return cb.Location
+}
+
+type ClassDefineStatement struct {
+	Location *FileLocation
+	// "class" token
+	Token token.Token
+	Name  string
+	Body  *ClassBlockStatement
+}
+
+func (cd *ClassDefineStatement) statementNode() {}
+
+func (cd *ClassDefineStatement) TokenLiteral() string { return cd.Token.Literal }
+
+func (cd *ClassDefineStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(
+		fmt.Sprintf("class %s ", cd.Name))
+	out.WriteString(cd.Body.String())
+	return out.String()
+}
+func (cd *ClassDefineStatement) GetFileLocation() *FileLocation {
+	return cd.Location
+}
+
 type WeiExportStatement struct {
 	Location *FileLocation
 	Token    token.Token
 	Names    []*Identifier
 }
 
-func (w *WeiExportStatement) statementNode() {
+func (w *WeiExportStatement) statementNode() {}
 
-}
-
-func (w *WeiExportStatement) TokenLiteral() string {
-	return w.Token.Literal
-}
+func (w *WeiExportStatement) TokenLiteral() string { return w.Token.Literal }
 
 func (w *WeiExportStatement) String() string {
 	var out bytes.Buffer
@@ -328,6 +445,7 @@ func (w *WeiExportStatement) String() string {
 	}
 	out.WriteString(strings.Join(names, ","))
 	out.WriteString(")")
+	out.WriteString("\n")
 	return out.String()
 }
 func (w *WeiExportStatement) GetFileLocation() *FileLocation {

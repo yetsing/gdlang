@@ -85,6 +85,9 @@ func Eval(
 		}
 		return ret
 
+	case *ast.ClassDefineStatement:
+		return evalClassDefine(ctx, state, env, node)
+
 	case *ast.WeiExportStatement:
 		return evalExport(ctx, state, env, node.Names)
 
@@ -444,6 +447,39 @@ func evalFunction(
 			state.HandleError(ret)
 		}
 		return ret
+	case *object.Class:
+		return evalClassCall(ctx, state, fn, args)
+	case *object.BoundMethod:
+		function := fn.Function()
+		if len(args) != len(function.Parameters) {
+			return state.WrongNumberArgument(function.Name, len(args), len(function.Parameters))
+		}
+		extendedEnv := extendFunctionEnv(function, args)
+		extendedEnv.Pass("this", fn.This(), true)
+		extendedEnv.Pass("cls", fn.Class(), true)
+		location := function.Body.GetFileLocation()
+		state.CreateFrame(location.Filename, function.Name)
+		evaluated := Eval(ctx, state, function.Body, extendedEnv)
+		state.DestroyFrame()
+		if IsError(evaluated) {
+			return evaluated
+		}
+		return unwrapReturnValue(evaluated)
+	case *object.BoundClassMethod:
+		function := fn.Function()
+		if len(args) != len(function.Parameters) {
+			return state.WrongNumberArgument(function.Name, len(args), len(function.Parameters))
+		}
+		extendedEnv := extendFunctionEnv(function, args)
+		extendedEnv.Pass("cls", fn.Class(), true)
+		location := function.Body.GetFileLocation()
+		state.CreateFrame(location.Filename, function.Name)
+		evaluated := Eval(ctx, state, function.Body, extendedEnv)
+		state.DestroyFrame()
+		if IsError(evaluated) {
+			return evaluated
+		}
+		return unwrapReturnValue(evaluated)
 	default:
 		return state.NewError("not a function: '%s'", fn.Type())
 	}
@@ -453,7 +489,7 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for paramIdx, parameter := range fn.Parameters {
-		env.Pass(parameter.Value, args[paramIdx])
+		env.Pass(parameter.Value, args[paramIdx], false)
 	}
 
 	return env

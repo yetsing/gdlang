@@ -63,6 +63,7 @@ for in
 /*
 abc
 */
+class
 `
 
 	tests := []struct {
@@ -748,6 +749,14 @@ abc
 		{
 			expectedType:    token.COMMENT,
 			expectedLiteral: "\nabc\n",
+		},
+		{
+			expectedType:    token.NEWLINE,
+			expectedLiteral: "\n",
+		},
+		{
+			expectedType:    token.CLASS,
+			expectedLiteral: "class",
 		},
 		{
 			expectedType:    token.NEWLINE,

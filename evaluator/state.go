@@ -78,6 +78,12 @@ func (g *WeiState) Unreachable(msg string) *object.Error {
 	return e
 }
 
+func (g *WeiState) WrongNumberArgument(name string, got, want int) *object.Error {
+	e := object.WrongNumberArgument3(name, got, want)
+	g.HandleError(e)
+	return e
+}
+
 func getLine(filename string, lineno int) string {
 	data, err := os.ReadFile(filename)
 	if err != nil {

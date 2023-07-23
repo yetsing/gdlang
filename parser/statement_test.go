@@ -734,6 +734,199 @@ func TestFunctionDefineStatement(t *testing.T) {
 
 }
 
+func TestClassDefineStatementEmptyBody(t *testing.T) {
+	input := `class Foo{}`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ClassDefineStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ClassDefineStatement. got=%T",
+			program.Statements[0])
+	}
+
+	expectedName := "Foo"
+	if stmt.Name != expectedName {
+		t.Fatalf("expected name %q, got=%q", expectedName, stmt.Name)
+	}
+
+	if len(stmt.Body.Statements) != 0 {
+		t.Fatalf("expected empty body, got=%d", len(stmt.Body.Statements))
+	}
+}
+
+func TestClassDefineStatement(t *testing.T) {
+	input := `class Foo{
+var a
+var b = 2
+con c
+con d = 3
+var class.e = 4
+
+fn __init__() {}
+fn class.init() {}
+}`
+
+	l := lexer.New(input)
+	p := New(l)
+	program, err := p.ParseProgram()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ClassDefineStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ClassDefineStatement. got=%T",
+			program.Statements[0])
+	}
+
+	expectedName := "Foo"
+	if stmt.Name != expectedName {
+		t.Fatalf("expected name %q, got=%q", expectedName, stmt.Name)
+	}
+
+	if len(stmt.Body.Statements) != 7 {
+		t.Fatalf("expected body 7, got=%d", len(stmt.Body.Statements))
+	}
+
+	statements := stmt.Body.Statements
+
+	{
+		stmt0, ok := statements[0].(*ast.ClassVariableDeclarationStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[0] is not ast.ClassVariableDeclarationStatement. got=%T", statements[0])
+		}
+		if !testIdentifier(t, stmt0.Name, "a") {
+			t.FailNow()
+		}
+		if stmt0.Con || stmt0.Class {
+			t.Fatalf("stmt0 expected normal var, got con=%v class=%v", stmt0.Con, stmt0.Class)
+		}
+		if stmt0.Expr != nil {
+			t.Fatalf("stmt0 expected empty expr, got=%T", stmt0.Expr)
+		}
+	}
+	{
+		stmt1, ok := statements[1].(*ast.ClassVariableDeclarationStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[1] is not ast.ClassVariableDeclarationStatement. got=%T", statements[0])
+		}
+		if !testIdentifier(t, stmt1.Name, "b") {
+			t.FailNow()
+		}
+		if stmt1.Con || stmt1.Class {
+			t.Fatalf("stmt1 expected normal var, got con=%v class=%v", stmt1.Con, stmt1.Class)
+		}
+		if stmt1.Expr == nil {
+			t.Fatalf("stmt1 expected expr, got=%T", stmt1.Expr)
+		}
+		testIntegerLiteral(t, stmt1.Expr, 2)
+	}
+	{
+		stmt2, ok := statements[2].(*ast.ClassVariableDeclarationStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[2] is not ast.ClassVariableDeclarationStatement. got=%T", statements[0])
+		}
+		if !testIdentifier(t, stmt2.Name, "c") {
+			t.FailNow()
+		}
+		if !stmt2.Con || stmt2.Class {
+			t.Fatalf("stmt2 expected normal con, got con=%v class=%v", stmt2.Con, stmt2.Class)
+		}
+		if stmt2.Expr != nil {
+			t.Fatalf("stmt2 expected empty expr, got=%T", stmt2.Expr)
+		}
+	}
+
+	{
+		stmt3, ok := statements[3].(*ast.ClassVariableDeclarationStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[3] is not ast.ClassVariableDeclarationStatement. got=%T", statements[0])
+		}
+		if !testIdentifier(t, stmt3.Name, "d") {
+			t.FailNow()
+		}
+		if !stmt3.Con || stmt3.Class {
+			t.Fatalf("stmt3 expected normal con, got con=%v class=%v", stmt3.Con, stmt3.Class)
+		}
+		if stmt3.Expr == nil {
+			t.Fatalf("stmt3 expected expr, got=%T", stmt3.Expr)
+		}
+		testIntegerLiteral(t, stmt3.Expr, 3)
+	}
+
+	{
+		stmt4, ok := statements[4].(*ast.ClassVariableDeclarationStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[4] is not ast.ClassVariableDeclarationStatement. got=%T", statements[0])
+		}
+		if !testIdentifier(t, stmt4.Name, "e") {
+			t.FailNow()
+		}
+		if stmt4.Con || !stmt4.Class {
+			t.Fatalf("stmt4 expected class con, got con=%v class=%v", stmt4.Con, stmt4.Class)
+		}
+		if stmt4.Expr == nil {
+			t.Fatalf("stmt4 expected expr, got=%T", stmt4.Expr)
+		}
+		testIntegerLiteral(t, stmt4.Expr, 4)
+	}
+
+	{
+		stmt5, ok := statements[5].(*ast.ClassMethodDefineStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[5] is not ast.ClassMethodDefineStatement. got=%T", statements[0])
+		}
+		if stmt5.Class {
+			t.Fatalf("stmt5 expected normal method, but class=%v", stmt5.Class)
+		}
+		function := stmt5.Function
+		if function.Name != "__init__" {
+			t.Fatalf("stmt5 expected __init__ name, but got=%q", function.Name)
+		}
+		if len(function.Parameters) != 0 {
+			t.Fatalf("stmt5 expected empty parameter, but got=%v", len(function.Parameters))
+		}
+		if len(function.Body.Statements) != 0 {
+			t.Fatalf("stmt5 expected empty body, but got=%v", len(function.Body.Statements))
+		}
+	}
+	{
+		stmt6, ok := statements[6].(*ast.ClassMethodDefineStatement)
+		if !ok {
+			t.Fatalf("Body.Statements[6] is not ast.ClassMethodDefineStatement. got=%T", statements[0])
+		}
+		if !stmt6.Class {
+			t.Fatalf("stmt6 expected class method, but class=%v", stmt6.Class)
+		}
+		function := stmt6.Function
+		if function.Name != "init" {
+			t.Fatalf("stmt6 expected init name, but got=%q", function.Name)
+		}
+		if len(function.Parameters) != 0 {
+			t.Fatalf("stmt6 expected empty parameter, but got=%v", len(function.Parameters))
+		}
+		if len(function.Body.Statements) != 0 {
+			t.Fatalf("stmt6 expected empty body, but got=%v", len(function.Body.Statements))
+		}
+	}
+}
+
 func TestWeiExportStatements(t *testing.T) {
 	tests := []struct {
 		input         string

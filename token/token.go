@@ -51,6 +51,7 @@ const (
 	BITWISE_NOT = "~"
 
 	// Keywords
+	CLASS    = "class"
 	FUNCTION = "FUNCTION"
 	TRUE     = "TRUE"
 	FALSE    = "FALSE"
@@ -116,6 +117,7 @@ func (t *Token) LiteralIs(s string) bool {
 }
 
 var keywords = map[string]TokenType{
+	"class":    CLASS,
 	"fn":       FUNCTION,
 	"var":      VAR,
 	"con":      CON,

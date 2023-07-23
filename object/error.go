@@ -26,6 +26,10 @@ func WrongNumberArgument2(got, min, max int) *Error {
 	return NewError("wrong number of arguments. got=%d, want=%d-%d", got, min, max)
 }
 
+func WrongNumberArgument3(name string, got, want int) *Error {
+	return NewError("%s wrong number of arguments. got=%d, want=%d", name, got, want)
+}
+
 func wrongArgumentType(got ObjectType) *Error {
 	return NewError("wrong argument type: '%s'", got)
 }

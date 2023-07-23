@@ -143,6 +143,7 @@ func (p *Parser) isStatementEnd() bool {
 // | break_statement
 // | wei_export_statement
 // | function_define_statement
+// | class_define_statement
 func (p *Parser) statement() (ast.Statement, error) {
 	p.skipNewline()
 	defer func() { p.skipNewline() }()
@@ -185,9 +186,190 @@ func (p *Parser) statement() (ast.Statement, error) {
 		}
 		p.restore(info)
 		return p.functionDefineStatement()
+	case token.CLASS:
+		return p.classDefineStatement()
 	default:
 		return p.expressionStatement()
 	}
+}
+
+// class_define_statement ::= "class" IDENT class_block_statement
+func (p *Parser) classDefineStatement() (*ast.ClassDefineStatement, error) {
+	location := p.currFileLocation()
+	tok := p.currToken
+	err := p.eat(token.CLASS)
+	if err != nil {
+		return nil, err
+	}
+	name := p.currToken.Literal
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.classBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.NEWLINE)
+	}
+	stmt := &ast.ClassDefineStatement{
+		Location: location,
+		Token:    tok,
+		Name:     name,
+		Body:     body,
+	}
+	return stmt, nil
+}
+
+// class_block_statement ::= "{" (class_statement)* "}"
+func (p *Parser) classBlockStatement() (*ast.ClassBlockStatement, error) {
+	location := p.currFileLocation()
+	tok := p.currToken
+	err := p.eat(token.LBRACE)
+	if err != nil {
+		return nil, err
+	}
+	block := &ast.ClassBlockStatement{Location: location, Token: tok}
+	// 处理空的语句块的情况
+	p.skipNewline()
+
+	for !p.currTokenIs(token.RBRACE) {
+		stmt, err := p.classStatement()
+		if err != nil {
+			return nil, err
+		}
+		block.Statements = append(block.Statements, stmt)
+	}
+
+	err = p.eat(token.RBRACE)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+// class_statement ::= class_variable_declaration_statement | class_method_define_statement
+func (p *Parser) classStatement() (ast.Statement, error) {
+	p.skipNewline()
+	defer func() { p.skipNewline() }()
+	//info := p.dump()
+	switch p.currToken.Type {
+	case token.VAR, token.CON:
+		return p.classVariableDeclarationStatement()
+	default:
+		return p.classMethodDefineStatement()
+	}
+}
+
+// class_variable_declaration_statement ::= ("var" | "con") (IDENT ["=" expression] | "class" "." IDENT "=" "expression") (";" | NEWLINE)
+func (p *Parser) classVariableDeclarationStatement() (*ast.ClassVariableDeclarationStatement, error) {
+	location := p.currFileLocation()
+	tok := p.currToken
+	con := p.currTokenIs(token.CON)
+	err := p.eatIn(token.VAR, token.CON)
+	if err != nil {
+		return nil, err
+	}
+	class := false
+	if p.currTokenIs(token.CLASS) {
+		err = p.eatContinuously(token.CLASS, token.DOT)
+		if err != nil {
+			return nil, err
+		}
+		class = true
+	}
+	name, err := p.ident()
+	if err != nil {
+		return nil, err
+	}
+	var expr ast.Expression
+	// 类属性必须要赋值
+	if class {
+		err = p.eat(token.ASSIGN)
+		if err != nil {
+			return nil, err
+		}
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	} else if p.currTokenIs(token.ASSIGN) {
+		p.nextToken()
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.NEWLINE)
+	}
+	stmt := &ast.ClassVariableDeclarationStatement{
+		Location: location,
+		Token:    tok,
+		Con:      con,
+		Class:    class,
+		Name:     name,
+		Expr:     expr,
+	}
+	return stmt, nil
+}
+
+// class_method_define_statement ::= "fn" ["class" "."] IDENT "(" parameter_list ")" block_statement (";" | NEWLINE)
+func (p *Parser) classMethodDefineStatement() (*ast.ClassMethodDefineStatement, error) {
+	location := p.currFileLocation()
+	tok := p.currToken
+	err := p.eat(token.FUNCTION)
+	if err != nil {
+		return nil, err
+	}
+	class := false
+	if p.currTokenIs(token.CLASS) {
+		err = p.eatContinuously(token.CLASS, token.DOT)
+		if err != nil {
+			return nil, err
+		}
+		class = true
+	}
+	name := p.currToken.Literal
+	err = p.eat(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.LPAREN)
+	if err != nil {
+		return nil, err
+	}
+	p.parenCount++
+	params, err := p.parameterList()
+	if err != nil {
+		return nil, err
+	}
+	p.parenCount--
+	err = p.eat(token.RPAREN)
+	if err != nil {
+		return nil, err
+	}
+	block, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.NEWLINE)
+	}
+	stmt := &ast.ClassMethodDefineStatement{
+		Location: location,
+		Token:    tok,
+		Class:    class,
+		Function: &ast.FunctionLiteral{
+			Location:   location,
+			Token:      tok,
+			Name:       name,
+			Parameters: params,
+			Body:       block,
+		},
+	}
+	return stmt, nil
 }
 
 // function_define_statement ::= "fn" IDENT "(" parameter_list ")" block_statement (";" | NEWLINE)

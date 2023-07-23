@@ -9,6 +9,16 @@
 			"include": "#wei"
 		},
 		{
+			"comment": "Language constants",
+			"match": "\\b(true|false|null)\\b",
+			"name": "constant.language.weilang"
+		},
+		{
+			"comment": "Built-in functions",
+			"match": "\\b(abs|bin|len|hex|oct|print|typ)\\b(?=\\()",
+			"name": "support.function.builtin.weilang"
+		},
+		{
 			"include": "#statements"
 		},
 		{
@@ -23,16 +33,6 @@
 		{
 			"comment": "数字",
 			"include": "#numeric_literals"
-		},
-		{
-			"comment": "Language constants",
-			"match": "\\b(true|false|null)\\b",
-			"name": "constant.language.weilang"
-		},
-		{
-			"comment": "Built-in functions",
-			"match": "\\b(abs|bin|len|hex|oct|print|typ)\\b(?=\\()",
-			"name": "support.function.builtin.weilang"
 		},
 		{
 			"comment": "Terminators",
@@ -60,7 +60,7 @@
 			"comment": "wei 语句",
 			"match": "\\b(wei)\\b\\.\\b(import|export|filename)\\b",
 			"captures": {
-				"1":{
+				"1": {
 					"name": "keyword.other.weilang"
 				},
 				"2": {
@@ -68,25 +68,44 @@
 				}
 			}
 		},
-		"function_other": {
+		"function_define": {
 			"patterns": [
 				{
-					"comment": "函数调用",
-					"match": "(\\w+)\\(",
-					"name": "meta.function-call.weilang entity.name.function.weilang"
+					"comment": "魔法方法定义",
+					"match": "\\b(fn)\\b\\s+(__\\w+__)\\(",
+					"captures": {
+						"1": {
+							"name": "keyword.function.weilang"
+						},
+						"2": {
+							"name": "support.function.magic.weilang"
+						}
+					}
+				},
+				{
+					"comment": "类方法定义",
+					"match": "\\b(fn)\\b\\s+(class\\.)(\\w+)\\(",
+					"captures": {
+						"1": {
+							"name": "keyword.function.weilang"
+						},
+						"2": {
+							"name": "keyword.class.weilang"
+						},
+						"3": {
+							"name": "entity.name.function.weilang"
+						}
+					}
 				},
 				{
 					"comment": "函数定义",
-					"match": "^\\b(con|var)\\b\\s+(\\w+)\\s+=\\s+(\\bfn\\b)\\(",
+					"match": "\\b(fn)\\b\\s+(\\w+)\\(",
 					"captures": {
 						"1": {
-							"name": "keyword.con.weilang"
+							"name": "keyword.function.weilang"
 						},
 						"2": {
 							"name": "entity.name.function.weilang"
-						},
-						"3": {
-							"name": "keyword.function.weilang"
 						}
 					}
 				}
@@ -175,6 +194,10 @@
 					"name": "keyword.function.weilang"
 				},
 				{
+					"match": "\\bclass\\b",
+					"name": "keyword.class.weilang"
+				},
+				{
 					"match": "\\b(not|and|or|wei)\\b",
 					"name": "keyword.other.weilang"
 				}
@@ -228,6 +251,9 @@
 		},
 		"statements": {
 			"patterns": [
+				{
+					"include": "#function_define"
+				},
 				{
 					"include": "#declaration"
 				},
@@ -405,8 +431,16 @@
 			]
 		},
 		"identifier": {
-			"name": "variable.other.weilang",
-			"match": "\\w+\\d*"
+			"patterns": [
+				{
+					"name": "variable.language.special.this.weilang",
+					"match": "\\b(this)\\b"
+				},
+				{
+					"name": "variable.other.weilang",
+					"match": "\\w+\\d*"
+				}
+			]
 		}
 	},
 	"scopeName": "source.weilang"
