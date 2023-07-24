@@ -139,13 +139,60 @@ var builtins = map[string]*object.Builtin{
 		Name: "bin",
 		Fn:   bin,
 	},
-	"len": {
-		Name: "len",
-		Fn:   _len,
+	// bool(object) -> bool
+	// 将对象转化为 bool 值
+	"bool": {
+		Name: "bool",
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return object.WrongNumberArgument(len(args), 1)
+			}
+			return object.NativeBoolToBooleanObject(isTruthy(args[0]))
+		},
+	},
+	// ensure(condition, msg)
+	// condition 为假时报错，错误信息为传入的 msg
+	"ensure": {
+		Name: "ensure",
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return object.WrongNumberArgument(len(args), 2)
+			}
+			if !isTruthy(args[0]) {
+				return object.NewError(args[1].String())
+			}
+			return nil
+		},
 	},
 	"hex": {
 		Name: "hex",
 		Fn:   hex,
+	},
+	// int(object) -> int
+	// 将对象转化为整数，支持传入字符串、数字
+	"int": {
+		Name: "int",
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return object.WrongNumberArgument(len(args), 1)
+			}
+			switch arg := args[0].(type) {
+			case *object.Integer:
+				return arg
+			case *object.String:
+				v, err := strconv.ParseInt(arg.Value, 10, 64)
+				if err != nil {
+					return object.NewError(err.Error())
+				}
+				return object.NewInteger(v)
+			default:
+				return object.WrongArgumentTypeAt(args[0].Type(), 0)
+			}
+		},
+	},
+	"len": {
+		Name: "len",
+		Fn:   _len,
 	},
 	"oct": {
 		Name: "oct",

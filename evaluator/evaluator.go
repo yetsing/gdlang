@@ -119,16 +119,21 @@ func Eval(
 		return ret
 
 	case *ast.BinaryOpExpression:
-		left := Eval(ctx, state, node.Left, env)
-		if IsError(left) {
-			return left
+		switch node.Operator {
+		case "and", "or":
+			return evalLogicalOperation(ctx, state, env, node)
+		default:
+			left := Eval(ctx, state, node.Left, env)
+			if IsError(left) {
+				return left
+			}
+			right := Eval(ctx, state, node.Right, env)
+			if IsError(right) {
+				return right
+			}
+			state.UpdateLocation(node)
+			return evalBinaryOpExpression(ctx, state, node.Operator, left, right)
 		}
-		right := Eval(ctx, state, node.Right, env)
-		if IsError(right) {
-			return right
-		}
-		state.UpdateLocation(node)
-		return evalBinaryOpExpression(ctx, state, node.Operator, left, right)
 
 	case *ast.CallExpression:
 		function := Eval(ctx, state, node.Function, env)
@@ -349,6 +354,9 @@ func evalWhileStatement(
 ) object.Object {
 	for {
 		condition := Eval(ctx, state, ws.Condition, env)
+		if IsError(condition) {
+			return condition
+		}
 		if isTruthy(condition) {
 			encolosedEnv := object.NewEnclosedEnvironment(env)
 			val := Eval(ctx, state, ws.Body, encolosedEnv)
@@ -658,6 +666,42 @@ func evalBitwiseNotOperatorExpression(
 	return object.NewInteger(^value)
 }
 
+// 计算 and or 逻辑运算
+func evalLogicalOperation(
+	ctx context.Context,
+	state *WeiState,
+	env *object.Environment,
+	node *ast.BinaryOpExpression,
+) object.Object {
+	if node.Operator == "and" {
+		left := Eval(ctx, state, node.Left, env)
+		if IsError(left) {
+			return left
+		}
+		if !isTruthy(left) {
+			return left
+		}
+		right := Eval(ctx, state, node.Right, env)
+		if IsError(right) {
+			return right
+		}
+		return right
+	} else {
+		left := Eval(ctx, state, node.Left, env)
+		if IsError(left) {
+			return left
+		}
+		if isTruthy(left) {
+			return left
+		}
+		right := Eval(ctx, state, node.Right, env)
+		if IsError(right) {
+			return right
+		}
+		return right
+	}
+}
+
 func evalBinaryOpExpression(
 	ctx context.Context,
 	state *WeiState,
@@ -674,10 +718,6 @@ func evalBinaryOpExpression(
 		return object.NativeBoolToBooleanObject(left == right)
 	case operator == "!=":
 		return object.NativeBoolToBooleanObject(left != right)
-	case operator == "and":
-		return object.NativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
-	case operator == "or":
-		return object.NativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	default:
 		return state.NewError("unsupported operand type for %s: '%s' and '%s'",
 			operator, left.Type(), right.Type())

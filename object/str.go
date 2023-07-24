@@ -411,6 +411,23 @@ func upperMethod(obj Object, args ...Object) Object {
 func init() {
 	strAttr = &attributeStore{
 		attribute: map[string]Object{
+			// str.contains(substr) -> bool
+			"contains": &BuiltinMethod{
+				ctype: STRING_OBJ,
+				name:  "contain",
+				Fn: func(obj Object, args ...Object) Object {
+					if len(args) != 1 {
+						return WrongNumberArgument(len(args), 1)
+					}
+					this := obj.(*String)
+					substr, ok := args[0].(*String)
+					if !ok {
+						return WrongArgumentTypeAt(args[0].Type(), 0)
+					}
+					res := strings.Contains(this.Value, substr.Value)
+					return NativeBoolToBooleanObject(res)
+				},
+			},
 			"count": &BuiltinMethod{
 				ctype: STRING_OBJ,
 				name:  "count",
@@ -430,6 +447,26 @@ func init() {
 				ctype: STRING_OBJ,
 				name:  "format",
 				Fn:    formatMethod,
+			},
+			// str.isdigit() -> bool
+			"isdigit": &BuiltinMethod{
+				ctype: STRING_OBJ,
+				name:  "isdigit",
+				Fn: func(obj Object, args ...Object) Object {
+					if len(args) != 0 {
+						return WrongNumberArgument(len(args), 0)
+					}
+					this := obj.(*String)
+					if this.Length == 0 {
+						return NativeBoolToBooleanObject(false)
+					}
+					for _, s := range this.Value {
+						if s < '0' || s > '9' {
+							return NativeBoolToBooleanObject(false)
+						}
+					}
+					return NativeBoolToBooleanObject(true)
+				},
 			},
 			"join": &BuiltinMethod{
 				ctype: STRING_OBJ,

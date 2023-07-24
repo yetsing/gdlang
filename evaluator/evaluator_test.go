@@ -409,7 +409,7 @@ func TestEvalIntegerExpression(t *testing.T) {
 func TestEvalBooleanExpression(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected bool
+		expected any
 	}{
 		{"true", true},
 		{"false", false},
@@ -439,27 +439,41 @@ func TestEvalBooleanExpression(t *testing.T) {
 		{`"中文a" != "中文"`, true},
 		{`"中文" != "中文"`, false},
 
-		{`1 and 0`, false},
-		{`1 and 2`, true},
-		{`"1" and ""`, false},
-		{`"1" and "2"`, true},
-		{`"1" and 2`, true},
+		{`1 and 0`, 0},
+		{`1 and 2`, 2},
+		{`"1" and ""`, ""},
+		{`"1" and "2"`, "2"},
+		{`"1" and 2`, 2},
 		{`2 > 1 and 3 > 2`, true},
 
-		{`1 or 0`, true},
-		{`1 or 2`, true},
-		{`"1" or ""`, true},
-		{`"1" or "2"`, true},
-		{`"1" or 2`, true},
+		{`1 or 0`, 1},
+		{`1 or 2`, 1},
+		{`"1" or ""`, "1"},
+		{`"1" or "2"`, "1"},
+		{`"1" or 2`, "1"},
 		{`2 > 1 or 3 > 2`, true},
 
 		{"not true and true", false},
 		{"not true or true", true},
+
+		{"bool([] and [][0])", false},
+		{"0 or 1", 1},
 	}
 
 	for _, tt := range tests {
 		evaluated := testEval(t, tt.input)
-		testBooleanObject(t, evaluated, tt.expected)
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, evaluated, int64(expected))
+		case int64:
+			testIntegerObject(t, evaluated, expected)
+		case string:
+			testStringObject(t, evaluated, expected)
+		case bool:
+			testBooleanObject(t, evaluated, expected)
+		default:
+			t.Errorf("impossible type case")
+		}
 	}
 }
 

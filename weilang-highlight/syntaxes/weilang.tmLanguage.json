@@ -15,7 +15,7 @@
 		},
 		{
 			"comment": "Built-in functions",
-			"match": "\\b(abs|bin|len|hex|oct|print|typ)\\b(?=\\()",
+			"match": "\\b(abs|bin|ensure|len|hex|oct|print|type)\\b(?=\\()",
 			"name": "support.function.builtin.weilang"
 		},
 		{
@@ -50,9 +50,6 @@
 		},
 		{
 			"include": "#runes"
-		},
-		{
-			"include": "#identifier"
 		}
 	],
 	"repository": {
@@ -178,7 +175,7 @@
 			"patterns": [
 				{
 					"comment": "Flow control keywords",
-					"match": "\\b(break|continue|else|for|if|while|return)\\b",
+					"match": "\\b(break|continue|else|for|if|while|return|in)\\b",
 					"name": "keyword.control.weilang"
 				},
 				{
