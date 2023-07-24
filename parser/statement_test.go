@@ -936,7 +936,7 @@ con d = 3
 var class.e = 4
 
 fn __init__() {}
-fn class.init() {}
+class.init() {}
 }`
 
 	l := lexer.New(input)

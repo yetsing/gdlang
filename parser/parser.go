@@ -335,9 +335,9 @@ func (p *Parser) classVariableDeclarationStatement() (*ast.ClassVariableDeclarat
 func (p *Parser) classMethodDefineStatement() (*ast.ClassMethodDefineStatement, error) {
 	location := p.currFileLocation()
 	tok := p.currToken
-	err := p.eat(token.FUNCTION)
-	if err != nil {
-		return nil, err
+	var err error
+	if p.currTokenIs(token.FUNCTION) {
+		p.nextToken()
 	}
 	class := false
 	if p.currTokenIs(token.CLASS) {
