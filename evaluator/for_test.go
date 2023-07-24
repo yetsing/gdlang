@@ -40,6 +40,14 @@ n`, 9,
 		}
 		n`, 9,
 			false},
+		{`
+		var m = "abcd"
+		var c = ""
+		for (con i, e in m) {
+		c = e
+		}
+		c`, "d",
+			false},
 	}
 
 	for _, tt := range tests {

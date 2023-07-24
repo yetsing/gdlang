@@ -65,6 +65,10 @@ func (s *String) slice(start, end int) string {
 	return exutf8.RuneSubString(s.Value, start, end-start)
 }
 
+func (s *String) Iter() Iterator {
+	return NewStringIterator(s)
+}
+
 // ================================
 // str 对象的内置属性和方法
 // ================================

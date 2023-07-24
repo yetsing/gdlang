@@ -10,6 +10,7 @@ const (
 	RETURN_VALUE_OBJ         = "return_value"
 	FUNCTION_OBJ             = "function"
 	STRING_OBJ               = "str"
+	STRING_ITERATOR_OBJ      = "str_iterator"
 	BUILTIN_OBJ              = "builtin"
 	LIST_OBJ                 = "list"
 	LIST_ITERATOR_OBJ        = "list_iterator"
