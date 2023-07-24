@@ -13,7 +13,7 @@ type StringIterator struct {
 }
 
 func (si *StringIterator) Type() ObjectType {
-	return LIST_ITERATOR_OBJ
+	return STRING_ITERATOR_OBJ
 }
 
 func (si *StringIterator) TypeIs(objectType ObjectType) bool {
