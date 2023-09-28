@@ -8,24 +8,28 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
 	"weilang/token"
 )
 
 type Lexer struct {
-	// Filename 文件名
-	Filename string
-	input    string
-	// current index of ch in ucodes
+	// filename 文件名
+	filename string
+	//    输入文本
+	input string
+	// ch 在 ucodes 里面的下标
 	index int
 	// current char
 	ch rune
 	// unicode 列表
-	ucodes   []rune
+	ucodes []rune
+	// ch 所在的行列
 	position token.Position
 	// 标记索引和位置，方便计算 Token 的 start end
 	markIndex    int
 	markPosition token.Position
-	// token 数组和索引，用来支持回溯
+	//    token 数组和索引，用来支持回溯
+	//    下一个 token 的索引
 	tokenIndex int
 	tokens     []token.Token
 }
@@ -49,52 +53,78 @@ func New(input string) *Lexer {
 func NewWithFilename(filename string) *Lexer {
 	input := stringFromFilename(filename)
 	l := New(input)
-	l.Filename = filename
+	l.filename = filename
 	return l
+}
+
+func (l *Lexer) Filename() string {
+	return l.filename
 }
 
 func (l *Lexer) GetLines() []string {
 	return strings.Split(l.input, "\n")
 }
 
+// Dump 读取当前 token 索引
 func (l *Lexer) Dump() int {
 	return l.tokenIndex
 }
 
+// Restore 恢复至指定 token 索引
+// 与 Dump 配合使用，可以在读取 token 之后进行撤销
+// 具体使用例子可看 parser/parser.go
 func (l *Lexer) Restore(index int) {
 	l.tokenIndex = index
 }
 
+// NextToken 获取下一个 token ，同时增加 token 索引
 func (l *Lexer) NextToken() token.Token {
 	tk := l.getToken(l.tokenIndex)
 	l.tokenIndex++
 	return tk
 }
 
+// PeekToken 查看下一个 token ，不增加 token 索引
 func (l *Lexer) PeekToken() token.Token {
 	return l.getToken(l.tokenIndex)
 }
 
 func (l *Lexer) getToken(index int) token.Token {
+	//    索引超出已读取范围，再次进行读取
 	if index >= len(l.tokens) {
 		tk := l.readToken()
 		l.tokens = append(l.tokens, tk)
 	}
+	//    索引没有超出已读取范围，直接取之前已经读取过的
 	return l.tokens[index]
+}
+
+func (l *Lexer) lastToken() (token.Token, bool) {
+	length := len(l.tokens)
+	if length > 0 {
+		return l.tokens[length-1], true
+	}
+	return token.Token{}, false
 }
 
 func (l *Lexer) readToken() token.Token {
 	var ttype token.TokenType
 
 	l.skipWhitespace()
+
 	l.mark()
 
+	if l.needSemicolon() {
+		tk := l.buildToken(token.SEMICOLON)
+		tk.Literal = ";"
+		return tk
+	}
+
 	switch l.ch {
-	case '\n':
-		ttype = token.NEWLINE
 	case '=':
+		//    "==" 相等符号
 		if l.peekCharIs('=') {
-			l.readChar()
+			l.advance(1)
 			ttype = token.EQ
 		} else {
 			ttype = token.ASSIGN
@@ -104,11 +134,12 @@ func (l *Lexer) readToken() token.Token {
 	case '-':
 		ttype = token.MINUS
 	case '!':
+		//    "!=" 不相等符号
 		if l.peekCharIs('=') {
-			l.readChar()
+			l.advance(1)
 			ttype = token.NOT_EQ
 		} else {
-			l.readChar()
+			l.advance(1)
 			tok := l.buildToken(token.ILLEGAL)
 			tok.Literal = "invalid char !"
 			return tok
@@ -210,16 +241,48 @@ func (l *Lexer) readToken() token.Token {
 	return l.buildToken(ttype)
 }
 
+// needSemicolon 判断是否需要插入分号
+// 插入规则参考 Go https://gfw.go101.org/article/line-break-rules.html
+//
+//	1.在Go代码中，注释除外，如果一个代码行的最后一个语法词段（token）为下列所示之一，则一个分号将自动插入在此字段后（即行尾）：
+//	    一个标识符；
+//	    一个整数、浮点数、虚部、码点或者字符串字面量；
+//	    这几个跳转关键字之一：break、continue、fallthrough和return；
+//	    自增运算符++或者自减运算符--；
+//	    一个右括号：)、]或}。
+//	2.为了允许一条复杂语句完全显示在一个代码行中，分号可能被插入在一个右小括号)或者右大括号}之前。
+//
+// 第二条规则不好实现，原因在于没有简单的方法区分 {} 是字典还是语句块，例如下面两个
+// {'a': 1} { var a = 3 }
+// 为了不给分词器引入过多的复杂度，决定不实现第二条规则
+// 因此，一条语句的结尾除了分号之外，还能是右花括号
+func (l *Lexer) needSemicolon() bool {
+	// semicolonTokenTypes 需要插入分号的 token 类型
+	var semicolonTokenTypes = []token.TokenType{
+		token.IDENT, token.INT, token.STRING, token.BREAK, token.CONTINUE, token.RETURN,
+		token.RPAREN, token.RBRACKET, token.RBRACE, token.TRUE, token.FALSE, token.NULL,
+		token.RETURN, token.BREAK, token.CONTINUE,
+	}
+	if lastToken, exist := l.lastToken(); exist {
+		//     lastToken 位于行末尾
+		if l.position.Line > lastToken.End.Line && lastToken.TypeIn(semicolonTokenTypes...) {
+			return true
+		}
+	}
+	return false
+}
+
 func (l *Lexer) init() {
 	l.ucodes = []rune(l.input)
 	l.position.Line = 0
 	l.position.Column = -1
-	l.Filename = "<input>"
+	//    默认是 <input> 表示是用户输入而来（比如 repl 中用户输入代码）
+	l.filename = "<input>"
 	l.tokenIndex = 0
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' || l.ch == '\n' {
 		l.readChar()
 	}
 }
@@ -279,7 +342,8 @@ func (l *Lexer) buildToken(ttype token.TokenType) token.Token {
 		startIndex++
 		endIndex--
 	case token.EOF:
-		// 确保 EOF token 的 Literal 为空字符串
+		//    EOF 时， endIndex 已经超出范围
+		//    确保 EOF token 的 Literal 为空字符串
 		return token.Token{
 			Type:    token.EOF,
 			Literal: "",

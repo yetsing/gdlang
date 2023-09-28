@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
 	"weilang/ast"
 	"weilang/lexer"
 	"weilang/token"
@@ -51,7 +52,7 @@ type Parser struct {
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:          l,
-		filename:   l.Filename,
+		filename:   l.Filename(),
 		lines:      l.GetLines(),
 		parenCount: 0,
 		whileStack: []int{0},

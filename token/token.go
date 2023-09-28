@@ -138,6 +138,7 @@ var keywords = map[string]TokenType{
 	"wei":      WEI,
 }
 
+// LookupIdent 确定 ident 是否关键字
 func LookupIdent(ident string) TokenType {
 	if tok, ok := keywords[ident]; ok {
 		return tok

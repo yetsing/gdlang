@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"weilang/token"
@@ -73,10 +74,6 @@ class
 		expectedEnd     token.Position
 	}{
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			token.VAR, "var",
 			token.Position{Line: 1},
 			token.Position{Line: 1, Column: 3},
@@ -102,10 +99,6 @@ class
 			token.Position{Line: 1, Column: 13},
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			token.CON, "con",
 			token.Position{Line: 2},
 			token.Position{Line: 2, Column: 3},
@@ -129,14 +122,6 @@ class
 			token.SEMICOLON, ";",
 			token.Position{Line: 2, Column: 12},
 			token.Position{Line: 2, Column: 13},
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
 		},
 		{
 			token.CON, "con",
@@ -189,10 +174,6 @@ class
 			token.Position{Line: 4, Column: 20},
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			token.IDENT, "x",
 			token.Position{Line: 5, Column: 2},
 			token.Position{Line: 5, Column: 3},
@@ -213,10 +194,6 @@ class
 			token.Position{Line: 5, Column: 8},
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			token.RBRACE, "}",
 			token.Position{Line: 6},
 			token.Position{Line: 6, Column: 1},
@@ -225,14 +202,6 @@ class
 			token.SEMICOLON, ";",
 			token.Position{Line: 6, Column: 1},
 			token.Position{Line: 6, Column: 2},
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
 		},
 		{expectedType: token.VAR, expectedLiteral: "var"},
 		{expectedType: token.IDENT, expectedLiteral: "result"},
@@ -244,43 +213,23 @@ class
 		{expectedType: token.IDENT, expectedLiteral: "ten"},
 		{expectedType: token.RPAREN, expectedLiteral: ")"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.MINUS, expectedLiteral: "-"},
 		{expectedType: token.SLASH, expectedLiteral: "/"},
 		{expectedType: token.ASTERISK, expectedLiteral: "*"},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.LESS_THAN, expectedLiteral: "<"},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.GREAT_THAN, expectedLiteral: ">"},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.LESS_EQUAL_THAN, expectedLiteral: "<="},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.GREAT_EQUAL_THAN, expectedLiteral: ">="},
 		{expectedType: token.INT, expectedLiteral: "5"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.IF, expectedLiteral: "if"},
 		{expectedType: token.LPAREN, expectedLiteral: "("},
 		{expectedType: token.INT, expectedLiteral: "5"},
@@ -288,92 +237,45 @@ class
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.RPAREN, expectedLiteral: ")"},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.RETURN, expectedLiteral: "return"},
 		{expectedType: token.TRUE, expectedLiteral: "true"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
 		{expectedType: token.ELSE, expectedLiteral: "else"},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.RETURN, expectedLiteral: "return"},
 		{expectedType: token.FALSE, expectedLiteral: "false"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.EQ, expectedLiteral: "=="},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.INT, expectedLiteral: "10"},
 		{expectedType: token.NOT_EQ, expectedLiteral: "!="},
 		{expectedType: token.INT, expectedLiteral: "9"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.STRING, expectedLiteral: "foobar"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{expectedType: token.STRING, expectedLiteral: "foo bar"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{expectedType: token.LBRACKET, expectedLiteral: "["},
 		{expectedType: token.INT, expectedLiteral: "1"},
 		{expectedType: token.COMMA, expectedLiteral: ","},
 		{expectedType: token.INT, expectedLiteral: "2"},
 		{expectedType: token.RBRACKET, expectedLiteral: "]"},
 		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.LBRACE, expectedLiteral: "{"},
 		{expectedType: token.STRING, expectedLiteral: "foo"},
 		{expectedType: token.COLON, expectedLiteral: ":"},
 		{expectedType: token.STRING, expectedLiteral: "bar"},
 		{expectedType: token.RBRACE, expectedLiteral: "}"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{expectedType: token.IDENT, expectedLiteral: "a"},
 		{expectedType: token.DOT, expectedLiteral: "."},
 		{expectedType: token.IDENT, expectedLiteral: "foo"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{expectedType: token.INT, expectedLiteral: "1"},
 		{
 			expectedType: token.MODULO, expectedLiteral: "%",
@@ -385,33 +287,20 @@ class
 			expectedStart: token.Position{Line: 26, Column: 4},
 			expectedEnd:   token.Position{Line: 26, Column: 5},
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType: token.COMMENT, expectedLiteral: " 这是一段注释",
 			expectedStart: token.Position{Line: 27, Column: 2},
 			expectedEnd:   token.Position{Line: 27, Column: 9},
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
 		{expectedType: token.STRING, expectedLiteral: "world"},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType: token.STRING, expectedLiteral: "hello world",
 			expectedStart: token.Position{Line: 29, Column: 0},
 			expectedEnd:   token.Position{Line: 29, Column: 13},
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType: token.VAR, expectedLiteral: "var",
 			expectedStart: token.Position{Line: 30, Column: 1},
@@ -432,36 +321,24 @@ class
 			expectedStart: token.Position{Line: 30, Column: 13},
 			expectedEnd:   token.Position{Line: 30, Column: 19},
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType: token.STRING, expectedLiteral: "中文字符串",
 			expectedStart: token.Position{Line: 31, Column: 0},
 			expectedEnd:   token.Position{Line: 31, Column: 7},
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType: token.STRING,
 			// go 大于 \x7f 的转义都会变成 65533
 			expectedLiteral: "转义'\"\a\b\f\n\r\t\v\000\x00\u00ff\u0000\uabcd\uFFFF",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.STRING,
 			expectedLiteral: "\u0000\uabcd\uFFFF\U00000000\U00012345",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.WHILE,
 			expectedLiteral: "while",
@@ -483,41 +360,25 @@ class
 			expectedLiteral: "{",
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			expectedType:    token.IDENT,
 			expectedLiteral: "statement",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.CONTINUE,
 			expectedLiteral: "continue",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.BREAK,
 			expectedLiteral: "break",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.RBRACE,
 			expectedLiteral: "}",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "0b10",
@@ -526,10 +387,7 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "0b10001111",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "0o17",
@@ -538,10 +396,7 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "0o7777",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "0x1234",
@@ -558,18 +413,12 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "0xABCDEF",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "1234",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "1",
@@ -582,10 +431,7 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "2",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "1",
@@ -598,10 +444,7 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "2",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.INT,
 			expectedLiteral: "1",
@@ -626,10 +469,7 @@ class
 			expectedType:    token.INT,
 			expectedLiteral: "2",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.NOT,
 			expectedLiteral: "not",
@@ -646,10 +486,7 @@ class
 			expectedType:    token.NULL,
 			expectedLiteral: "null",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.CON,
 			expectedLiteral: "con",
@@ -686,10 +523,7 @@ class
 			expectedType:    token.RPAREN,
 			expectedLiteral: ")",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.WEI,
 			expectedLiteral: "wei",
@@ -714,10 +548,7 @@ class
 			expectedType:    token.RPAREN,
 			expectedLiteral: ")",
 		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
+		{expectedType: token.SEMICOLON, expectedLiteral: ";"},
 		{
 			expectedType:    token.FOR,
 			expectedLiteral: "for",
@@ -727,46 +558,27 @@ class
 			expectedLiteral: "in",
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			expectedType:    token.COMMENT,
 			expectedLiteral: " another comment",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.COMMENT,
 			expectedLiteral: "ddd",
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			expectedType:    token.COMMENT,
 			expectedLiteral: "\nabc\n",
-		},
-		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
 		},
 		{
 			expectedType:    token.CLASS,
 			expectedLiteral: "class",
 		},
 		{
-			expectedType:    token.NEWLINE,
-			expectedLiteral: "\n",
-		},
-		{
 			expectedType: token.EOF,
 		},
 	}
 
+	lines := strings.Split(input, "\n")
 	l := New(input)
 
 	for i, tt := range tests {
@@ -776,8 +588,9 @@ class
 			if tok.TypeIs(token.ILLEGAL) {
 				fmt.Printf("ILLEGAL: %s\n", tok.Literal)
 			}
-			t.Fatalf("tests[%d] - tokentype wrong. expected=%q %q, got=%q",
-				i, tt.expectedType, tt.expectedLiteral, tok.Type)
+			fmt.Println(lines[tok.Start.Line])
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q %q, got=%q %+v",
+				i, tt.expectedType, tt.expectedLiteral, tok.Type, tok)
 		}
 
 		if tok.Literal != tt.expectedLiteral {
@@ -800,6 +613,9 @@ class
 				i, tt.expectedEnd, tok.End)
 		}
 	}
+}
+
+func TestRawString(t *testing.T) {
 
 	input2 := "`abc\n\\u1234`"
 	expected := struct {
@@ -809,7 +625,7 @@ class
 		token.STRING,
 		"abc\n\\u1234",
 	}
-	l = New(input2)
+	l := New(input2)
 	tok := l.NextToken()
 
 	if !tok.TypeIs(expected.Type) {
@@ -821,6 +637,8 @@ class
 		t.Fatalf("literal wrong. expected=%q, got=%q",
 			expected.Literal, tok.Literal)
 	}
+
+	fmt.Printf("%+v\n", l.NextToken())
 }
 
 func TestIllegalToken(t *testing.T) {
