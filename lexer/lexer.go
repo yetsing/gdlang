@@ -99,10 +99,13 @@ func (l *Lexer) getToken(index int) token.Token {
 	return l.tokens[index]
 }
 
-func (l *Lexer) lastToken() (token.Token, bool) {
-	length := len(l.tokens)
-	if length > 0 {
-		return l.tokens[length-1], true
+// 获取当前解析出来的最后一个 token （注释除外）
+func (l *Lexer) lastTokenExceptComment() (token.Token, bool) {
+	for idx := len(l.tokens) - 1; idx >= 0; idx-- {
+		tk := l.tokens[idx]
+		if tk.TypeNotIs(token.COMMENT) {
+			return tk, true
+		}
 	}
 	return token.Token{}, false
 }
@@ -263,9 +266,17 @@ func (l *Lexer) needSemicolon() bool {
 		token.RPAREN, token.RBRACKET, token.RBRACE, token.TRUE, token.FALSE, token.NULL,
 		token.RETURN, token.BREAK, token.CONTINUE,
 	}
-	if lastToken, exist := l.lastToken(); exist {
-		//     lastToken 位于行末尾
+	if lastToken, exist := l.lastTokenExceptComment(); exist {
+		//     文件末尾
+		if l.ch == 0 && lastToken.TypeIn(semicolonTokenTypes...) {
+			return true
+		}
+		//     lastTokenExceptComment 位于行末尾
 		if l.position.Line > lastToken.End.Line && lastToken.TypeIn(semicolonTokenTypes...) {
+			//    if {} else {} 中间的右花括号不加分号
+			if l.getIdentifier() == "else" {
+				return false
+			}
 			return true
 		}
 	}
@@ -282,9 +293,12 @@ func (l *Lexer) init() {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' || l.ch == '\n' {
+	for unicode.IsSpace(l.ch) {
 		l.readChar()
 	}
+	//for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' || l.ch == '\n' {
+	//	l.readChar()
+	//}
 }
 
 func (l *Lexer) readChar() {
@@ -595,6 +609,22 @@ func (l *Lexer) readMultilineComment() token.Token {
 	l.readChar()
 	l.readChar()
 	return tk
+}
+
+func (l *Lexer) getIdentifier() string {
+	index := l.index
+	for unicode.IsSpace(l.ucodes[index]) {
+		index++
+	}
+	start := index
+	ch := l.ucodes[index]
+	if !isIdentifierStart(ch) {
+		return ""
+	}
+	for isIdentifierContinue(l.ucodes[index]) {
+		index++
+	}
+	return string(l.ucodes[start:index])
 }
 
 // 参考 Python 的规则 https://docs.python.org/3/reference/lexical_analysis.html#identifiers

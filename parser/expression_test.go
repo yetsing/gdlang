@@ -2,6 +2,7 @@ package parser
 
 import (
 	"testing"
+
 	"weilang/ast"
 	"weilang/lexer"
 )
@@ -371,18 +372,6 @@ func TestParsingDictLiteralsStringKeys(t *testing.T) {
 			map[string]int64{
 				"one": 1,
 				"two": 2,
-			},
-		},
-		{
-			`{
-					"one": 1, 
-					"two":2, 
-					"three": 3
-					}`,
-			map[string]int64{
-				"one":   1,
-				"two":   2,
-				"three": 3,
 			},
 		},
 		{

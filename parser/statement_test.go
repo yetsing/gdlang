@@ -2,6 +2,7 @@ package parser
 
 import (
 	"testing"
+
 	"weilang/ast"
 	"weilang/lexer"
 )
@@ -21,14 +22,12 @@ var foo = fn(a) { // abc
 var b = foo(10) // abc
 b // abc
 // if
-if(2) 
-{} 
+if(2) {} 
 else {
 }
 b = b + 2
 
-if(2) 
-{} 
+if(2){} 
 else if (4) {
 }
 b = b + 2
@@ -36,8 +35,7 @@ b = b + 2
 while(2){}
 b = b + 2
 
-while(2)
-{
+while(2){
 var d = 1}
 
 b = b + 2
@@ -400,8 +398,7 @@ func TestIfStatements(t *testing.T) {
 
 func TestIfStatementsWithElse(t *testing.T) {
 	input := `
-if (x < y) 
-{ x }
+if (x < y){ x }
 else { y }
 `
 

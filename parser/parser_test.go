@@ -3,21 +3,19 @@ package parser
 import (
 	"fmt"
 	"testing"
+
 	"weilang/ast"
 	"weilang/lexer"
 )
 
-func TestSyntaxError(t *testing.T) {
+func TestSyntaxOk(t *testing.T) {
 	tests := []struct {
 		input string
 	}{
 		{"var \na= 1"},
-		{"var a\n= 1"},
 		{"var a=\n 1"},
 		{"con \nb= a"},
-		{"con b\n= a"},
 		{"con b=\n a"},
-		{"a \n= 1"},
 		{"a =\n 1"},
 		{"a =\n 1"},
 		{"a and\n 1"},
@@ -25,6 +23,21 @@ func TestSyntaxError(t *testing.T) {
 		{"if (a) {a} \n else \n if (b) {b}"},
 		{"while \n(a) {a}"},
 		{"fn \n(a) {a}"},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		_, err := p.ParseProgram()
+		if err != nil {
+			t.Errorf("got error\n%s\n%v", tt.input, err)
+		}
+	}
+}
+
+func TestSyntaxError(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
 		{"fn(a) {a} var b = 2"},
 		{"if(a) {a} var b = 2"},
 		{"if(a) {a} else {} var b = 2"},

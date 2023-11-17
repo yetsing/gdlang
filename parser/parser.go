@@ -64,6 +64,7 @@ func New(l *lexer.Lexer) *Parser {
 /*
 使用 lsbasi 的解析实现 (https://github.com/rspivak/lsbasi)
 相比 《用Go语言自制解释器》 的实现更容易理解
+2023-10-21 14:47:42 表达式解析决定改用《用Go语言自制解释器》中的解析方法
 */
 
 func (p *Parser) ParseProgram() (*ast.Program, error) {
@@ -92,10 +93,21 @@ func (p *Parser) program() (*ast.Program, error) {
 	return program, nil
 }
 
-// block_statement ::= "{" (statement)* "}"
+// block_statement ::= statement_block ";"
+// statement_block ::= "{" (statement)* "}"
 func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
-	p.skipNewline()
+	block, err := p.statementBlock()
+	if err != nil {
+		return nil, err
+	}
+	err = p.eat(token.SEMICOLON)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
 
+func (p *Parser) statementBlock() (*ast.BlockStatement, error) {
 	tok := p.currToken
 	location := p.currFileLocation()
 	err := p.eat(token.LBRACE)
@@ -103,9 +115,6 @@ func (p *Parser) blockStatement() (*ast.BlockStatement, error) {
 		return nil, err
 	}
 	block := &ast.BlockStatement{Location: location, Token: tok}
-	// 处理空的语句块的情况，例如 "if (1) {}"
-	p.skipNewline()
-
 	for !p.currTokenIs(token.RBRACE) {
 		stmt, err := p.statement()
 		if err != nil {
@@ -126,7 +135,7 @@ func (p *Parser) isStatementEnd() bool {
 	case token.SEMICOLON:
 		p.nextToken()
 		return true
-	case token.NEWLINE, token.RBRACE, token.EOF:
+	case token.RBRACE, token.EOF:
 		return true
 	default:
 		return false
@@ -367,7 +376,7 @@ func (p *Parser) classMethodDefineStatement() (*ast.ClassMethodDefineStatement, 
 	if err != nil {
 		return nil, err
 	}
-	block, err := p.blockStatement()
+	block, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +426,7 @@ func (p *Parser) functionDefineStatement() (*ast.FunctionDefineStatement, error)
 		return nil, err
 	}
 	p.whileStack = append(p.whileStack, 0)
-	block, err := p.blockStatement()
+	block, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +487,7 @@ func (p *Parser) forInStatement() (*ast.ForInStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := p.blockStatement()
+	body, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -546,6 +555,10 @@ func (p *Parser) weiExportStatement() (*ast.WeiExportStatement, error) {
 	err = p.eat(token.RPAREN)
 	if err != nil {
 		return nil, err
+	}
+
+	if !p.isStatementEnd() {
+		return nil, p.expectError(token.SEMICOLON)
 	}
 
 	stmt := &ast.WeiExportStatement{
@@ -725,7 +738,7 @@ func (p *Parser) primary() (ast.Expression, error) {
 	return expr, nil
 }
 
-// expression_statement ::= expression (";" | NEWLINE)
+// expression_statement ::= expression ";"
 func (p *Parser) expressionStatement() (*ast.ExpressionStatement, error) {
 	stmt := &ast.ExpressionStatement{Location: p.currFileLocation(), Token: p.currToken}
 	expr, err := p.expression()
@@ -753,8 +766,6 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 		return nil, err
 	}
 	branches = append(branches, branch)
-	endToken := p.currToken
-	p.skipNewline()
 
 	for p.currTokenIs(token.ELSE) {
 		p.nextToken()
@@ -764,25 +775,19 @@ func (p *Parser) ifStatement() (*ast.IfStatement, error) {
 				return nil, err
 			}
 			branches = append(branches, branch)
-			endToken = p.currToken
-			p.skipNewline()
 		} else {
-			elseBody, err = p.blockStatement()
+			elseBody, err = p.statementBlock()
 			if err != nil {
 				return nil, err
 			}
 			break
 		}
 	}
-	// endToken 用来避免语句直接跟在 } 后面，而不是另起一行
-	// 麻烦点在于 if 语句会有多个语句块
-	// 需要处理下面三种非法情况
-	// if(1) {} var a = 1
-	// if(1) {} else if(2) {} var a = 1
-	// if(1) {} else if(2) {} else {} var a = 1
-	if !endToken.TypeIs(token.NEWLINE) && !p.isStatementEnd() {
+
+	if !p.isStatementEnd() {
 		return nil, p.expectError(token.SEMICOLON)
 	}
+
 	stmt := &ast.IfStatement{
 		Location:   location,
 		Token:      tok,
@@ -813,7 +818,7 @@ func (p *Parser) ifBranch() (*ast.IfBranch, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := p.blockStatement()
+	body, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -848,7 +853,7 @@ func (p *Parser) whileStatement() (*ast.WhileStatement, error) {
 		return nil, err
 	}
 	p.whileStack[len(p.whileStack)-1]++
-	body, err := p.blockStatement()
+	body, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -1373,6 +1378,7 @@ func (p *Parser) atom() (ast.Expression, error) {
 	case token.ILLEGAL:
 		return nil, p.syntaxError(p.currToken.Literal)
 	default:
+		fmt.Println("atom invalid error", p.currToken)
 		return nil, p.invalidError()
 	}
 	return expr, nil
@@ -1532,7 +1538,7 @@ func (p *Parser) functionLiteral() (*ast.FunctionLiteral, error) {
 		return nil, err
 	}
 	p.whileStack = append(p.whileStack, 0)
-	block, err := p.blockStatement()
+	block, err := p.statementBlock()
 	if err != nil {
 		return nil, err
 	}
@@ -1747,13 +1753,24 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 	return peek.TypeIs(t)
 }
 
+// 如果 token 是分号，直接跳过；否则不做任何操作
+func (p *Parser) skipIfSemicolon() {
+	if p.currToken.TypeIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+}
+
 func (p *Parser) expectError(expected token.TokenType) error {
 	msg := fmt.Sprintf("expected %q, but got %q", expected, p.currToken.Type)
 	return p.syntaxError(msg)
 }
 
+func (p *Parser) expectStatement() error {
+	return p.syntaxError("expected statement")
+}
+
 func (p *Parser) invalidError() error {
-	return p.syntaxError("invalid syntax")
+	return p.syntaxError(fmt.Sprintf("invalid syntax with token \"%s\"", p.currToken.Type))
 }
 
 func (p *Parser) syntaxError(msg string) error {
